@@ -549,9 +549,10 @@ with tf.Session(graph=graph) as session:
                       100 * accuracy(test_predictions, batch_labels_test, batch_seq_len_test) / batch_size)
                 print('------------------------')
 
-            if (step % num_steps) == 0:
-                #pokracovat = (input('Continue? 1/0'))
-                pokracovat = '0'
+            if step == num_steps: pokracovat = 0
+            # if (step % num_steps) == 0:
+            #     #pokracovat = (input('Continue? 1/0'))
+            #     pokracovat = '0'
 
         save_path = saver.save(session, "abcdefghij/{}_ens{}.ckpt".format(session_log_name, ensemble_num))
         # print('Test accuracy: %.1f%%' % accuracy(test_prediction.eval(), test_labels))
