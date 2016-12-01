@@ -4,11 +4,8 @@ import tensorflow as tf
 
 from PIL import Image as pilimg
 from loading import DataClass
+from loading import split_images
 
-path = "/home/andrej/tf/odo/"
-all_img = os.listdir(os.path.join(path, 'images/'))
-print(list(set([f.split("_")[1] for f in all_img])))
-num_classes = len(list(set([f.split("_")[1] for f in all_img])))
 
 # PARAMETRE_NN-------------------------------------------
 num_steps = 1000
@@ -16,8 +13,8 @@ batch_size = 16
 info_freq = 10
 session_log_name = 'go_6_1'
 
-num_hidden = [120,80]
-num_hidden_lstm = [64,48]
+num_hidden = [120, 80]
+num_hidden_lstm = [64, 48]
 
 keep_prob_fc = 0.5
 
@@ -25,18 +22,15 @@ chunk_size = 1024
 channels = 3
 
 image_height, image_width = (192, 256)
+# ------------------
+# nacitanie dat
+url = "/home/andrej/tf/odo/"
+# url = '/home/katarina/PycharmProjects/TensorFlowTut/ODO_loading'
 
-# cesta k obrazkom
-url = '/home/andrej/tf/odo'
-#url = '/home/marek/kody/ODO ocr/images'
+train_data_size = 6000
+num_classes = split_images(url, train_data_size)
 
-#------------------
 
-# skuska = DataClass('/home/andrej/tf/odo/train', batch_size, chunk_size, data_use='train')
-# print(skuska.data.shape)
-# print(skuska.labels)
-# print('hotovo')
-# quit()
 
 
 # velkost obrazka po aplikovani conv vrstiev
@@ -69,10 +63,10 @@ valid_data = DataClass(os.path.join(url, 'valid/'), batch_size, chunk_size, num_
 conv_layer_names = ['conv1', 'conv2', 'conv3', 'conv4']
 
 kernel_sizes = [
-    (5, 3),
     (3, 3),
-    (2, 2),
-    (2, 2)
+    (3, 3),
+    (3, 3),
+    (3, 3)
 ]
 kernel_sizes = {name: kernel_sizes[i] for i, name in enumerate(conv_layer_names)}
 
@@ -83,8 +77,8 @@ num_filters = {name: num_filters[i] for i, name in enumerate(conv_layer_names)}
 
 strides = [
 
-    (1, 1),
-    (1, 1),
+    (3, 3),
+    (3, 3),
     (2, 2),
     (2, 2),
 ]

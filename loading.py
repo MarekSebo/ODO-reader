@@ -3,21 +3,22 @@ import os
 from PIL import Image as pilimg
 import random
 
-path = "/home/andrej/tf/odo/"
-all_img = os.listdir(os.path.join(path, 'images/'))
-print([f.split("_")[1] for f in all_img])
 
+def split_images(url, split):
+    all_img = os.listdir(os.path.join(url, 'images/'))
+    if len(os.listdir(os.path.join(url, 'train/'))) != split:
+        for f in all_img[:split]:
+            im = pilimg.open(os.path.join(url, 'images/', f))
+            im = im.resize((256, 192))
+            im.save(os.path.join(url, 'train/', f))
 
-for f in all_img[:6]:
-    im = pilimg.open(os.path.join(path, 'images/', f))
-    im = im.resize((256, 192))
-    im.save(os.path.join(path, 'train/', f))
+        for f in all_img[split:]:
+            im = pilimg.open(os.path.join(url, 'images/', f))
+            im = im.resize((256, 192))
+            im.save(os.path.join(url, 'valid/', f))
 
-for f in all_img[6:8]:
-    im = pilimg.open(os.path.join(path, 'images/', f))
-    im = im.resize((256, 192))
-    im.save(os.path.join(path, 'valid/', f))
-
+    num_classes = len(list(set([f.split("_")[1] for f in all_img])))
+    return num_classes
 
 class DataClass(object):
     """
