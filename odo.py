@@ -5,11 +5,15 @@ import tensorflow as tf
 from PIL import Image as pilimg
 from loading import DataClass
 
+path = "/home/andrej/tf/odo/"
+all_img = os.listdir(os.path.join(path, 'images/'))
+print(list(set([f.split("_")[1] for f in all_img])))
+num_classes = len(list(set([f.split("_")[1] for f in all_img])))
 
 # PARAMETRE_NN-------------------------------------------
-num_steps = 100
-batch_size = 1
-info_freq = 5
+num_steps = 1000
+batch_size = 16
+info_freq = 10
 session_log_name = 'go_6_1'
 
 num_hidden = [120,80]
@@ -17,13 +21,10 @@ num_hidden_lstm = [64,48]
 
 keep_prob_fc = 0.5
 
-chunk_size = 2
+chunk_size = 1024
 channels = 3
 
-# toto treba zistit vseobecne!
-num_classes = 5
-
-image_height, image_width = (192,256)
+image_height, image_width = (192, 256)
 
 # cesta k obrazkom
 url = '/home/andrej/tf/odo'
@@ -216,7 +217,7 @@ with graph.as_default():
     # compute output activations and loss
     output = model(tf_dataset)
 
-    loss = tf.nn.softmax_cross_entropy_with_logits(output, tf_labels)
+    loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(output, tf_labels))
 
     # Optimizer.
     optimizer = tf.train.AdamOptimizer(learning_rate=0.0001, beta1=0.9, beta2=0.999, epsilon=1e-08).minimize(loss)
@@ -257,7 +258,7 @@ with tf.Session(graph=graph) as session:
 
 
         if (step % info_freq == 0):
-            print('Minibatch loss at step %d: %f' % (step, loss_value))
+            print('Minibatch loss at step {}: {}'.format(step, loss_value))
             print('Minibatch accuracy:', 100 * accuracy(predictions, batch_labels))
 
             # test accuracy
@@ -282,23 +283,26 @@ with tf.Session(graph=graph) as session:
     save_path = saver.save(session, "abcdefghij/{}.ckpt".format(session_log_name))
     # print('Test accuracy: %.1f%%' % accuracy(test_prediction.eval(), test_labels))
 
-#     results = []
-#     seq_test = []
-#     lab_test = []
-#     for offset in range(0, test_data.size - batch_size + 1, batch_size):
-#         data, lab, seq_len = test_data.next_batch()
-#         #na ensemble: pridat do test dat v classe metodu reset, ktora resetne shuffling - aby som robil s tymi istymi
-#         results.append((session.run(
-#             prediction,
-#             feed_dict={tf_train_dataset: data,
-#                        tf_seq_len: seq_len,
-#                        tf_keep_prob_conv: keep_prob_conv_ones, tf_keep_prob_fc: 1}
-#         )))
-#         seq_test.append(seq_len)
-#         lab_test.append(lab)
-#
-#
-#
+
+    results = []
+    valid_labels = []
+    for offset in range(0, valid_data.total_data_size - batch_size + 1, batch_size):
+        data, lab = valid_data.next_batch()
+        results.append((session.run(
+            prediction,
+            feed_dict={tf_dataset: data, tf_labels: lab, tf_keep_prob_fc: 1}
+        )))
+        valid_labels.append(lab)
+
+results = np.array(results).reshape(-1,num_classes)
+valid_labels = np.array(valid_labels).reshape(-1,num_classes)
+
+print('pred',[np.argmax(r) for r in np.array(results)])
+print('lab',[np.argmax(r) for r in np.array(valid_labels)])
+
+print('acc', accuracy(results,valid_labels))
+
+
 # seq_test = np.array(seq_test).reshape(-1)
 # lab_test = np.array(lab_test).reshape(-1)
 # results = np.transpose(np.array(results),[1,0,2,3]).reshape((maxi,-1,nr_classes))
