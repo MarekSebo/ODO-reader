@@ -12,17 +12,17 @@ info_freq = 10
 session_log_name = 'go_2'
 
 num_hidden = [120, 80]
-num_hidden_lstm = [64, 48]
 
 keep_prob_fc = 0.5
 
-chunk_size = 1024
+chunk_size = 128
 channels = 3
 
 image_height, image_width = (192, 256)
 # ------------------
 # nacitanie dat
-url = "/home/andrej/tf/odo/"
+# url = "/home/andrej/tf/odo/"
+url = "/home/marek/kody/ODO_reader"
 # url = '/home/katarina/PycharmProjects/TensorFlowTut/ODO_loading'
 
 train_data_size = 6000
@@ -59,31 +59,27 @@ valid_data = DataClass(os.path.join(url, 'valid/'), batch_size, chunk_size, num_
 ###############################
 # CONVOLUTION LAYERS SETTINGS #
 ###############################
-conv_layer_names = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5', 'conv6']
+conv_layer_names = ['conv1', 'conv2', 'conv3', 'conv4']
 
 kernel_sizes = [
     (3, 3),
     (3, 3),
-    (4, 4),
-    (5, 5),
-    (3, 4),
-    (2, 2)
+    (3, 3),
+    (3, 3)
 ]
 kernel_sizes = {name: kernel_sizes[i] for i, name in enumerate(conv_layer_names)}
 
 num_filters = [
-    20, 32, 28, 32, 36, 40
+    16, 32, 48, 64
 ]
 num_filters = {name: num_filters[i] for i, name in enumerate(conv_layer_names)}
 
 strides = [
-    (1, 1),
-    (2, 2),
-    (2, 2),
+
+    (3, 3),
     (3, 3),
     (2, 2),
-    (1, 1)
-
+    (2, 2),
 ]
 strides = {name: strides[i] for i, name in enumerate(conv_layer_names)}
 
@@ -91,10 +87,10 @@ paddings = [
     'VALID',
     'VALID',
     'VALID',
-    'VALID',
-    'VALID',
     'VALID'
 ]
+paddings = {name: paddings[i] for i, name in enumerate(conv_layer_names)}
+
 paddings = {name: paddings[i] for i, name in enumerate(conv_layer_names)}
 
 # DROPOUT
@@ -288,8 +284,7 @@ with tf.Session(graph=graph) as session:
 results = np.array(results).reshape(-1, num_classes)
 valid_labels = np.array(valid_labels).reshape(-1, num_classes)
 
-print('pred', [np.argmax(r) for r in np.array(results)])
-print('lab', [np.argmax(r) for r in np.array(valid_labels)])
+print('(prediction, true label):', list(zip([np.argmax(r) for r in np.array(results)], [np.argmax(r) for r in np.array(valid_labels)])))
+# print('lab', [np.argmax(r) for r in np.array(valid_labels)])
 
-print('acc', accuracy(results, valid_labels))
-
+print('accuracy', accuracy(results, valid_labels))
