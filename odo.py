@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import tensorflow as tf
+import subprocess
 
 from loading import DataClass
 from loading import split_images
@@ -91,8 +92,6 @@ paddings = [
 ]
 paddings = {name: paddings[i] for i, name in enumerate(conv_layer_names)}
 
-paddings = {name: paddings[i] for i, name in enumerate(conv_layer_names)}
-
 # DROPOUT
 output_sizes = {
 
@@ -149,7 +148,7 @@ with graph.as_default():
         ),
 
         'out': tf.Variable(tf.truncated_normal(
-            [num_hidden[1], num_classes], stddev=np.sqrt(2 / (num_hidden_lstm[1]))))
+            [num_hidden[1], num_classes], stddev=np.sqrt(2 / (num_hidden[1]))))
     }
 
     # vytvor vahy pre ostatne konvolucne vrstvy
@@ -264,6 +263,8 @@ with tf.Session(graph=graph) as session:
 
         # if step == num_steps: pokracovat = 0
         if (step % num_steps) == 0:
+            subprocess.call(['speech-dispatcher'])  # start speech dispatcher
+            subprocess.call(['spd-say', '" process has finished"'])
             continue_training = (input('Continue? 1/0'))
             # continue_training = '0'
 
