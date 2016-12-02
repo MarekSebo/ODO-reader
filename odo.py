@@ -2,16 +2,14 @@ import numpy as np
 import os
 import tensorflow as tf
 
-from PIL import Image as pilimg
 from loading import DataClass
 from loading import split_images
-
 
 # PARAMETRE_NN-------------------------------------------
 num_steps = 1000
 batch_size = 16
 info_freq = 10
-session_log_name = 'go_6_1'
+session_log_name = 'go_2'
 
 num_hidden = [120, 80]
 num_hidden_lstm = [64, 48]
@@ -31,18 +29,17 @@ train_data_size = 6000
 num_classes = split_images(url, train_data_size)
 
 
-
-
 # velkost obrazka po aplikovani conv vrstiev
 def conv_output_size(padding, input_height, input_width, stride, kernel_height, kernel_width):
-    if (padding == "VALID"):
+    output_height, output_width = (0, 0)
+    if padding == "VALID":
         output_height = (input_height - kernel_height) / stride + 1
         output_width = (input_width - kernel_width) / stride + 1
         output_height = int(np.floor(output_height))
         output_width = int(np.floor(output_width))
-    if (padding == "SAME"):
-        output_height = (input_height) / stride
-        output_width = (input_width) / stride
+    if padding == "SAME":
+        output_height = input_height / stride
+        output_width = input_width / stride
         output_height = int(np.ceil(output_height))
         output_width = int(np.ceil(output_width))
     return output_height, output_width
@@ -52,7 +49,9 @@ def conv_output_size(padding, input_height, input_width, stride, kernel_height, 
 
 
 def accuracy(predictions, labels):
-    return sum([(labels[i,np.argmax(predictions[i,:])] == 1) for i in range(predictions.shape[0])])/predictions.shape[0]
+    acc = sum([(labels[i, np.argmax(predictions[i, :])] == 1) for i in range(predictions.shape[0])]) \
+                / predictions.shape[0]
+    return acc
 
 train_data = DataClass(os.path.join(url, 'train/'), batch_size, chunk_size, num_classes, data_use='train')
 valid_data = DataClass(os.path.join(url, 'valid/'), batch_size, chunk_size, num_classes, data_use='valid')
@@ -60,31 +59,37 @@ valid_data = DataClass(os.path.join(url, 'valid/'), batch_size, chunk_size, num_
 ###############################
 # CONVOLUTION LAYERS SETTINGS #
 ###############################
-conv_layer_names = ['conv1', 'conv2', 'conv3', 'conv4']
+conv_layer_names = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5', 'conv6']
 
 kernel_sizes = [
     (3, 3),
     (3, 3),
-    (3, 3),
-    (3, 3)
+    (4, 4),
+    (5, 5),
+    (3, 4),
+    (2, 2)
 ]
 kernel_sizes = {name: kernel_sizes[i] for i, name in enumerate(conv_layer_names)}
 
 num_filters = [
-    16, 24, 28, 32
+    20, 32, 28, 32, 36, 40
 ]
 num_filters = {name: num_filters[i] for i, name in enumerate(conv_layer_names)}
 
 strides = [
+    (1, 1),
+    (2, 2),
+    (2, 2),
+    (3, 3),
+    (2, 2),
+    (1, 1)
 
-    (3, 3),
-    (3, 3),
-    (2, 2),
-    (2, 2),
 ]
 strides = {name: strides[i] for i, name in enumerate(conv_layer_names)}
 
 paddings = [
+    'VALID',
+    'VALID',
     'VALID',
     'VALID',
     'VALID',
@@ -192,7 +197,6 @@ with graph.as_default():
         # fully connected
 
         out = tf.matmul(out, weights['fc1']) + biases['fc1']
-        #out = tf.einsum('ijk,lk->ijl', out, tf.transpose(weights['fc1'])) + biases['fc1']
         out = tf.nn.dropout(out, tf_keep_prob_fc)
         out = tf.nn.relu(out)
 
@@ -222,7 +226,6 @@ with graph.as_default():
     initialization = tf.initialize_all_variables()
 
 
-
 with tf.Session(graph=graph) as session:
     if os.path.isfile("abcdefghij/{}.ckpt".format(session_log_name)):
         saver.restore(session, "abcdefghij/{}.ckpt".format(session_log_name))
@@ -249,15 +252,9 @@ with tf.Session(graph=graph) as session:
         _, loss_value, predictions = session.run(
             [optimizer, loss, prediction], feed_dict=feed_dict)
 
-
-
-        if (step % info_freq == 0):
+        if step % info_freq == 0:
             print('Minibatch loss at step {}: {}'.format(step, loss_value))
             print('Minibatch accuracy:', 100 * accuracy(predictions, batch_labels))
-
-            # test accuracy
-
-
 
             valid_predictions = session.run(
                 prediction,
@@ -269,14 +266,13 @@ with tf.Session(graph=graph) as session:
                   )
             print('------------------------')
 
-        #if step == num_steps: pokracovat = 0
+        # if step == num_steps: pokracovat = 0
         if (step % num_steps) == 0:
             continue_training = (input('Continue? 1/0'))
-            #continue_training = '0'
+            # continue_training = '0'
 
     save_path = saver.save(session, "abcdefghij/{}.ckpt".format(session_log_name))
     # print('Test accuracy: %.1f%%' % accuracy(test_prediction.eval(), test_labels))
-
 
     results = []
     valid_labels = []
@@ -288,51 +284,12 @@ with tf.Session(graph=graph) as session:
         )))
         valid_labels.append(lab)
 
-results = np.array(results).reshape(-1,num_classes)
-valid_labels = np.array(valid_labels).reshape(-1,num_classes)
 
-print('pred',[np.argmax(r) for r in np.array(results)])
-print('lab',[np.argmax(r) for r in np.array(valid_labels)])
+results = np.array(results).reshape(-1, num_classes)
+valid_labels = np.array(valid_labels).reshape(-1, num_classes)
 
-print('acc', accuracy(results,valid_labels))
+print('pred', [np.argmax(r) for r in np.array(results)])
+print('lab', [np.argmax(r) for r in np.array(valid_labels)])
 
+print('acc', accuracy(results, valid_labels))
 
-# seq_test = np.array(seq_test).reshape(-1)
-# lab_test = np.array(lab_test).reshape(-1)
-# results = np.transpose(np.array(results),[1,0,2,3]).reshape((maxi,-1,nr_classes))
-#
-#
-# print('---------------')
-# print('test accuracy')
-# print('---------------')
-# print('EXAMPLES')
-# print('---------------')
-#
-# correct=0
-# for j in range(results.shape[1]):
-#     result=[]
-#     for i in range(seq_test[j]):
-#         result.append(np.argmax(results[i][j]))
-#     if j<20:
-#         print('predict', ''.join(list(np.array(abeceda)[output_seq(result)])))
-#         print('correct',lab_test[j])
-#         print('-----------')
-#     if ''.join(list(np.array(abeceda)[output_seq(result)]))==lab_test[j]: correct+=1
-# print('overall accuracy',correct/(j+1),'(',correct,'/',j+1,')')
-#
-# print('-------------------')
-# print('mini-batch accuracy')
-# print('-------------------')
-#
-# correct = 0
-# for j in range(batch_size):
-#     result = []
-#     for i in range(batch_seq_len[j]):
-#         result.append(np.argmax(predictions[i][j]))
-#
-#     print('predict', ''.join(list(np.array(abeceda)[output_seq(result)])))
-#     print('correct', batch_labels[j])
-#     print('-----------')
-#     if ''.join(list(np.array(abeceda)[output_seq(result)])) == batch_labels[j]:
-#         correct += 1
-# print('accuracy', correct / (j + 1), '(', correct, '/', j + 1, ')')
