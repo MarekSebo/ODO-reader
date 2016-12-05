@@ -7,9 +7,9 @@ from loading import DataClass
 from loading import split_images
 
 # PARAMETRE_NN-------------------------------------------
-num_steps = 1000
+num_steps = 30000
 batch_size = 16
-info_freq = 10
+info_freq = 20
 session_log_name = 'go_2'
 
 num_hidden = [120, 80]
@@ -23,7 +23,7 @@ image_height, image_width = (192, 256)
 # ------------------
 # nacitanie dat
 # url = "/home/andrej/tf/odo/"
-url = "/home/marek/kody/ODO_reader"
+url = "/home/marek/kody/ODO_reader_"
 # url = '/home/katarina/PycharmProjects/TensorFlowTut/ODO_loading'
 
 train_data_size = 6000
