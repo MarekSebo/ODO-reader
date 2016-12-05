@@ -293,6 +293,5 @@ results = np.array(results).reshape(-1, num_classes)
 valid_labels = np.array(valid_labels).reshape(-1, num_classes)
 
 print('(prediction, true label):', list(zip([np.argmax(r) for r in np.array(results)], [np.argmax(r) for r in np.array(valid_labels)])))
-# print('lab', [np.argmax(r) for r in np.array(valid_labels)])
 
 print('accuracy', accuracy(results, valid_labels))
