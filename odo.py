@@ -51,8 +51,7 @@ def conv_output_size(padding, input_height, input_width, stride, kernel_height, 
 
 
 def accuracy(predictions, labels):
-    acc = sum([(labels[i, np.argmax(predictions[i, :])] == 1) for i in range(predictions.shape[0])]) \
-                / predictions.shape[0]
+    acc = sum([(labels[i, np.argmax(predictions[i, :])] == 1) for i in range(predictions.shape[0])])
     return acc
 
 train_data = DataClass(os.path.join(url, 'train/'),
@@ -238,8 +237,7 @@ with tf.Session(graph=graph) as session:
     print('Training {}'.format(session_log_name))
     print('------------------------')
 
-    batch_data_valid = valid_data.data
-    batch_labels_valid = valid_data.labels
+    (batch_data_valid, batch_labels_valid) = valid_data.next_batch()
 
     step = -1
     continue_training = '1'
@@ -260,7 +258,7 @@ with tf.Session(graph=graph) as session:
 
             valid_predictions = session.run(
                 prediction,
-                feed_dict={tf_dataset: batch_data_valid, tf_labels: batch_labels_valid,
+                feed_dict={tf_dataset: batch_data_valid,
                            tf_keep_prob_fc: 1}
             )
             print('Validation accuraccy (batch-sized subset)',
