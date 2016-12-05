@@ -20,7 +20,6 @@ chunk_size = 128
 channels = 3
 
 image_height, image_width = (192, 256)
-cut_height, cut_width = (150, 200)
 # ------------------
 # nacitanie dat
 url = "/home/andrej/tf/ODO_reader/"
@@ -28,7 +27,7 @@ url = "/home/andrej/tf/ODO_reader/"
 # url = '/home/katarina/PycharmProjects/TensorFlowTut/ODO_loading'
 
 train_data_size = 6000
-num_classes = split_images(url, train_data_size, image_height, image_width)
+num_classes = split_images(url, train_data_size)
 
 
 # velkost obrazka po aplikovani conv vrstiev
@@ -51,19 +50,12 @@ def conv_output_size(padding, input_height, input_width, stride, kernel_height, 
 
 
 def accuracy(predictions, labels):
-    acc = sum([(labels[i, np.argmax(predictions[i, :])] == 1) for i in range(predictions.shape[0])])
+    acc = sum([(labels[i, np.argmax(predictions[i, :])] == 1) for i in range(predictions.shape[0])]) \
+                / predictions.shape[0]
     return acc
 
-train_data = DataClass(os.path.join(url, 'train/'),
-                       batch_size, chunk_size, num_classes,
-                       image_height, image_width, cut_height, cut_width,
-                       data_use='train')
-valid_data = DataClass(os.path.join(url, 'valid/'),
-                       batch_size, chunk_size, num_classes,
-                       image_height, image_width, cut_height, cut_width,
-                       data_use='valid')
-
-image_height, image_width = (cut_height, cut_width)
+train_data = DataClass(os.path.join(url, 'train/'), batch_size, chunk_size, num_classes, data_use='train')
+valid_data = DataClass(os.path.join(url, 'valid/'), batch_size, chunk_size, num_classes, data_use='valid')
 
 ###############################
 # CONVOLUTION LAYERS SETTINGS #
@@ -72,7 +64,7 @@ conv_layer_names = ['conv1', 'conv2', 'conv3', 'conv4']
 
 kernel_sizes = [
     (3, 3),
-    (4, 4),
+    (3, 3),
     (3, 3),
     (3, 3)
 ]
@@ -85,7 +77,7 @@ num_filters = {name: num_filters[i] for i, name in enumerate(conv_layer_names)}
 
 strides = [
 
-    (2, 2),
+    (3, 3),
     (3, 3),
     (2, 2),
     (2, 2),
@@ -101,7 +93,9 @@ paddings = [
 paddings = {name: paddings[i] for i, name in enumerate(conv_layer_names)}
 
 # DROPOUT
-output_sizes = {}
+output_sizes = {
+
+}
 
 for i, layer in enumerate(conv_layer_names):
     if i == 0:
@@ -237,7 +231,8 @@ with tf.Session(graph=graph) as session:
     print('Training {}'.format(session_log_name))
     print('------------------------')
 
-    (batch_data_valid, batch_labels_valid) = valid_data.next_batch()
+    batch_data_valid = valid_data.data
+    batch_labels_valid = valid_data.labels
 
     step = -1
     continue_training = '1'
@@ -258,7 +253,7 @@ with tf.Session(graph=graph) as session:
 
             valid_predictions = session.run(
                 prediction,
-                feed_dict={tf_dataset: batch_data_valid,
+                feed_dict={tf_dataset: batch_data_valid, tf_labels: batch_labels_valid,
                            tf_keep_prob_fc: 1}
             )
             print('Validation accuraccy (batch-sized subset)',
