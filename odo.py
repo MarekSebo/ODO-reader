@@ -7,7 +7,7 @@ from loading import DataClass
 from loading import split_images
 
 # PARAMETRE_NN-------------------------------------------
-num_steps = 30000
+num_steps = 10
 batch_size = 16
 info_freq = 20
 session_log_name = 'go_2'
@@ -267,8 +267,8 @@ with tf.Session(graph=graph) as session:
             subprocess.call(['spd-say', '" process has finished"'])
             continue_training = (input('Continue? 1/0'))
             # continue_training = '0'
-
-    save_path = saver.save(session, "abcdefghij/{}.ckpt".format(session_log_name))
+    print(os.getcwd())
+    save_path = saver.save(session, "{}/abcdefghij/{}.ckpt".format(url,session_log_name))
     # print('Test accuracy: %.1f%%' % accuracy(test_prediction.eval(), test_labels))
 
     results = []
