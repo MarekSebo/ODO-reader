@@ -276,7 +276,6 @@ with tf.Session(graph=graph) as session:
             # continue_training = '0'
     print(os.getcwd())
     save_path = saver.save(session, "{}/abcdefghij/{}.ckpt".format(url,session_log_name))
-    # print('Test accuracy: %.1f%%' % accuracy(test_prediction.eval(), test_labels))
 
     results = []
     valid_labels = []
