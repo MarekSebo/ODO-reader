@@ -1,20 +1,20 @@
 import numpy as np
 import os
 from PIL import Image as pilimg
-import random
+from numpy import random
 
 
-def split_images(url, split):
+def split_images(url, split, h, w):
     all_img = os.listdir(os.path.join(url, 'images/'))
     if len(os.listdir(os.path.join(url, 'train/'))) != split:
         for f in all_img[:split]:
             im = pilimg.open(os.path.join(url, 'images/', f))
-            im = im.resize((256, 192))
+            im = im.resize((w, h))
             im.save(os.path.join(url, 'train/', f))
 
         for f in all_img[split:]:
             im = pilimg.open(os.path.join(url, 'images/', f))
-            im = im.resize((256, 192))
+            im = im.resize((w, h))
             im.save(os.path.join(url, 'valid/', f))
 
     num_classes = len(list(set([f.split("_")[1] for f in all_img])))
@@ -38,13 +38,19 @@ class DataClass(object):
     -spravit podclasses na test, train a validation sety
     -idealne ich ulozit do zvlast priecinkov
     """
-    def __init__(self, path, batch_size, chunk_size, num_class, data_use="train"):
+    def __init__(self, path, batch_size, chunk_size, num_class, h, w, cut_h, cut_w, data_use="train"):
         self.data = None
         self.labels = None
 
         self.path = path
         self.data_use = data_use
         self.num_class = num_class
+
+        self.h = h
+        self.w = w
+        self.cut_h = cut_h
+        self.cut_w = cut_w
+
         self.file_names = self.load_filenames()
         self.total_data_size = len(self.file_names)
 
@@ -73,8 +79,13 @@ class DataClass(object):
 
         for f in self.file_names[self.chunk_cursor:self.chunk_cursor + self.chunk_size]:
             im = pilimg.open(os.path.join(self.path, f))
-            im = np.array(im).astype(float) / 255
 
+            # random crop
+            x = random.randint(self.w - self.cut_w)
+            y = random.randint(self.h - self.cut_h)
+            im = im.crop((x, y, x + self.cut_w, y + self.cut_h))
+
+            im = np.array(im).astype(float) / 255
             chunk_imgs.append(im)
             chunk_labels.append(self.labels_to_onehot(f.split("_")[1]))
         self.chunk_cursor = (self.chunk_cursor + self.chunk_size)
