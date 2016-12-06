@@ -6,11 +6,13 @@ import subprocess
 from loading import DataClass
 from loading import split_images
 
+#
+
 # PARAMETRE_NN-------------------------------------------
-num_steps = 10
+num_steps = 10000
 batch_size = 16
-info_freq = 20
-session_log_name = 'go_5'
+info_freq = 25
+session_log_name = 'go_deep_7conv_2fc'
 
 num_hidden = [120, 80]
 
@@ -20,15 +22,14 @@ chunk_size = 128
 channels = 3
 
 image_height, image_width = (192, 256)
-cut_height, cut_width = (150, 200)
 # ------------------
 # nacitanie dat
-url = "/home/andrej/tf/ODO_reader/"
-# url = "/home/marek/kody/ODO_reader"
+# url = "/home/andrej/tf/odo/"
+url = "/home/marek/PycharmProjects/ODO_reader_"
 # url = '/home/katarina/PycharmProjects/TensorFlowTut/ODO_loading'
 
 train_data_size = 6000
-num_classes = split_images(url, train_data_size, image_height, image_width)
+num_classes = split_images(url, train_data_size)
 
 
 # velkost obrazka po aplikovani conv vrstiev
@@ -51,50 +52,51 @@ def conv_output_size(padding, input_height, input_width, stride, kernel_height, 
 
 
 def accuracy(predictions, labels):
-    acc = sum([(labels[i, np.argmax(predictions[i, :])] == 1) for i in range(predictions.shape[0])])\
-                /predictions.shape[0]
-
+    acc = sum([(labels[i, np.argmax(predictions[i, :])] == 1) for i in range(predictions.shape[0])]) \
+          / predictions.shape[0]
     return acc
 
-train_data = DataClass(os.path.join(url, 'train/'),
-                       batch_size, chunk_size, num_classes,
-                       image_height, image_width, cut_height, cut_width,
-                       data_use='train')
-valid_data = DataClass(os.path.join(url, 'valid/'),
-                       batch_size, chunk_size, num_classes,
-                       image_height, image_width, cut_height, cut_width,
-                       data_use='valid')
 
-image_height, image_width = (cut_height, cut_width)
+train_data = DataClass(os.path.join(url, 'train/'), batch_size, chunk_size, num_classes, data_use='train')
+valid_data = DataClass(os.path.join(url, 'valid/'), batch_size, chunk_size, num_classes, data_use='valid')
 
 ###############################
 # CONVOLUTION LAYERS SETTINGS #
 ###############################
-conv_layer_names = ['conv1', 'conv2', 'conv3', 'conv4']
+conv_layer_names = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5', 'conv6', 'conv7']
 
 kernel_sizes = [
-    (3, 3),
     (4, 4),
+    (3, 3),
+    (3, 3),
+    (3, 3),
+    (3, 3),
     (3, 3),
     (3, 3)
 ]
 kernel_sizes = {name: kernel_sizes[i] for i, name in enumerate(conv_layer_names)}
 
 num_filters = [
-    16, 32, 48, 64
+    16, 32, 48, 64, 64, 64, 64
 ]
 num_filters = {name: num_filters[i] for i, name in enumerate(conv_layer_names)}
 
 strides = [
 
-    (2, 2),
     (3, 3),
     (2, 2),
     (2, 2),
+    (2, 2),
+    (1, 1),
+    (1, 1),
+    (1, 1)
 ]
 strides = {name: strides[i] for i, name in enumerate(conv_layer_names)}
 
 paddings = [
+    'VALID',
+    'VALID',
+    'VALID',
     'VALID',
     'VALID',
     'VALID',
@@ -103,7 +105,9 @@ paddings = [
 paddings = {name: paddings[i] for i, name in enumerate(conv_layer_names)}
 
 # DROPOUT
-output_sizes = {}
+output_sizes = {
+
+}
 
 for i, layer in enumerate(conv_layer_names):
     if i == 0:
@@ -120,6 +124,12 @@ for i, layer in enumerate(conv_layer_names):
             strides[layer][0],
             kernel_sizes[layer][0], kernel_sizes[layer][1]
         )
+
+#DICTIONARY SIZE CHECK CONV LAYERS
+assert (len(conv_layer_names) == len(paddings) == len(strides) == len(num_filters) == len(kernel_sizes) == len(output_sizes)), print\
+    ("Error: sizes of parameter dictionaries of conv layers dont't match. "
+      "Printing len [conv_layer_names, paddings, strides,num_filers, kernel_sizes, output_sizes]",
+      len(conv_layer_names), len(paddings), len(strides),len(num_filters), len(kernel_sizes), len(output_sizes)      )
 
 graph = tf.Graph()
 
@@ -143,16 +153,16 @@ with graph.as_default():
                 conv_layer_names[-1]],
              num_hidden[0]],
             stddev=np.sqrt(2 / (
-                    output_sizes[conv_layer_names[-1]][0]
-                    * output_sizes[conv_layer_names[-1]][1]
-                    * num_filters[conv_layer_names[-1]]))
-                )
+                output_sizes[conv_layer_names[-1]][0]
+                * output_sizes[conv_layer_names[-1]][1]
+                * num_filters[conv_layer_names[-1]]))
+        )
         ),
 
         'fc2': tf.Variable(tf.truncated_normal(
-                [num_hidden[0],
-                 num_hidden[1]],
-                stddev=np.sqrt(2 / (num_hidden[0])))
+            [num_hidden[0],
+             num_hidden[1]],
+            stddev=np.sqrt(2 / (num_hidden[0])))
         ),
 
         'out': tf.Variable(tf.truncated_normal(
@@ -175,6 +185,7 @@ with graph.as_default():
     # vytvor biasy pre ostatne konvolucne vrstvy
     for l in conv_layer_names:
         biases[l] = tf.Variable(tf.zeros([num_filters[l]])),
+
 
     # Model
     def model(data):
@@ -228,7 +239,6 @@ with graph.as_default():
     saver = tf.train.Saver()
     initialization = tf.initialize_all_variables()
 
-
 with tf.Session(graph=graph) as session:
     if os.path.isfile("abcdefghij/{}.ckpt".format(session_log_name)):
         saver.restore(session, "abcdefghij/{}.ckpt".format(session_log_name))
@@ -239,7 +249,8 @@ with tf.Session(graph=graph) as session:
     print('Training {}'.format(session_log_name))
     print('------------------------')
 
-    (batch_data_valid, batch_labels_valid) = valid_data.next_batch()
+    batch_data_valid = valid_data.data
+    batch_labels_valid = valid_data.labels
 
     step = -1
     continue_training = '1'
@@ -260,7 +271,7 @@ with tf.Session(graph=graph) as session:
 
             valid_predictions = session.run(
                 prediction,
-                feed_dict={tf_dataset: batch_data_valid,
+                feed_dict={tf_dataset: batch_data_valid, tf_labels: batch_labels_valid,
                            tf_keep_prob_fc: 1}
             )
             print('Validation accuraccy (batch-sized subset)',
@@ -274,8 +285,9 @@ with tf.Session(graph=graph) as session:
             subprocess.call(['spd-say', '" process has finished"'])
             continue_training = (input('Continue? 1/0'))
             # continue_training = '0'
-    print(os.getcwd())
-    save_path = saver.save(session, "{}/abcdefghij/{}.ckpt".format(url,session_log_name))
+
+    save_path = saver.save(session, "abcdefghij/{}.ckpt".format(session_log_name))
+    # print('Test accuracy: %.1f%%' % accuracy(test_prediction.eval(), test_labels))
 
     results = []
     valid_labels = []
@@ -287,10 +299,11 @@ with tf.Session(graph=graph) as session:
         )))
         valid_labels.append(lab)
 
-
 results = np.array(results).reshape(-1, num_classes)
 valid_labels = np.array(valid_labels).reshape(-1, num_classes)
 
-print('(prediction, true label):', list(zip([np.argmax(r) for r in np.array(results)], [np.argmax(r) for r in np.array(valid_labels)])))
+print('(prediction, true label):',
+      list(zip([np.argmax(r) for r in np.array(results)], [np.argmax(r) for r in np.array(valid_labels)])))
+# print('lab', [np.argmax(r) for r in np.array(valid_labels)])
 
 print('accuracy', accuracy(results, valid_labels))
