@@ -22,6 +22,7 @@ chunk_size = 128
 channels = 3
 
 image_height, image_width = (192, 256)
+cut_height, cut_width = (150, 200)
 # ------------------
 # nacitanie dat
 # url = "/home/andrej/tf/odo/"
@@ -29,7 +30,7 @@ url = "/home/marek/PycharmProjects/ODO_reader_"
 # url = '/home/katarina/PycharmProjects/TensorFlowTut/ODO_loading'
 
 train_data_size = 6000
-num_classes = split_images(url, train_data_size)
+num_classes = split_images(url, train_data_size, image_height, image_width)
 
 
 # velkost obrazka po aplikovani conv vrstiev
@@ -56,9 +57,16 @@ def accuracy(predictions, labels):
           / predictions.shape[0]
     return acc
 
+train_data = DataClass(os.path.join(url, 'train/'),
+                       batch_size, chunk_size, num_classes,
+                       image_height, image_width, cut_height, cut_width,
+                       data_use='train')
+valid_data = DataClass(os.path.join(url, 'valid/'),
+                       batch_size, chunk_size, num_classes,
+                       image_height, image_width, cut_height, cut_width,
+                       data_use='valid')
 
-train_data = DataClass(os.path.join(url, 'train/'), batch_size, chunk_size, num_classes, data_use='train')
-valid_data = DataClass(os.path.join(url, 'valid/'), batch_size, chunk_size, num_classes, data_use='valid')
+image_height, image_width = (cut_height, cut_width)
 
 ###############################
 # CONVOLUTION LAYERS SETTINGS #
@@ -105,9 +113,7 @@ paddings = [
 paddings = {name: paddings[i] for i, name in enumerate(conv_layer_names)}
 
 # DROPOUT
-output_sizes = {
-
-}
+output_sizes = {}
 
 for i, layer in enumerate(conv_layer_names):
     if i == 0:
@@ -153,16 +159,16 @@ with graph.as_default():
                 conv_layer_names[-1]],
              num_hidden[0]],
             stddev=np.sqrt(2 / (
-                output_sizes[conv_layer_names[-1]][0]
-                * output_sizes[conv_layer_names[-1]][1]
-                * num_filters[conv_layer_names[-1]]))
-        )
+                    output_sizes[conv_layer_names[-1]][0]
+                    * output_sizes[conv_layer_names[-1]][1]
+                    * num_filters[conv_layer_names[-1]]))
+                )
         ),
 
         'fc2': tf.Variable(tf.truncated_normal(
-            [num_hidden[0],
-             num_hidden[1]],
-            stddev=np.sqrt(2 / (num_hidden[0])))
+                [num_hidden[0],
+                 num_hidden[1]],
+                stddev=np.sqrt(2 / (num_hidden[0])))
         ),
 
         'out': tf.Variable(tf.truncated_normal(
@@ -188,9 +194,10 @@ with graph.as_default():
 
 
     # Model
+    log = []
     def model(data):
         # INPUT je teraz velkosti batch x h x w x ch
-        print('input:', data.get_shape().as_list())
+        log.append('input: ' + str(data.get_shape().as_list()))
         out = data
 
         # ak chces menit konvolucne vrstvy, robi sa to hore pod settings
@@ -199,14 +206,16 @@ with graph.as_default():
             out = tf.nn.conv2d(out, weights[l], [1, strides[l][0], strides[l][1], 1], padding=paddings[l])
             out = tf.nn.relu(out + biases[l])
 
-            print(l, ':', out.get_shape().as_list())
+            log.append('KERNEL=' + str(kernel_sizes[l]) + ' STRIDE=' + str(strides[l]) + ' ' + paddings[l])
+            log.append(l + ': ' + str(out.get_shape().as_list()))
+
         # -------------------------
 
         shape = out.get_shape().as_list()
 
         # reshape:
         out = tf.reshape(out, [-1, shape[1] * shape[2] * shape[3]])
-        print('after reshape:', out.get_shape().as_list())
+        log.append('after reshape: ' + str(out.get_shape().as_list()))
 
         # fully connected
 
@@ -214,15 +223,16 @@ with graph.as_default():
         out = tf.nn.dropout(out, tf_keep_prob_fc)
         out = tf.nn.relu(out)
 
-        print('fc1:', out.get_shape().as_list())
+        log.append('fc1: ' + str(out.get_shape().as_list()))
 
         out = tf.matmul(out, weights['fc2']) + biases['fc2']
         out = tf.nn.dropout(out, tf_keep_prob_fc)
         out = tf.nn.relu(out)
 
-        print('fc2:', out.get_shape().as_list())
+        log.append('fc2: ' + str(out.get_shape().as_list()))
         out = tf.nn.relu(out)
 
+        print('\n'.join(log))
         return tf.matmul(out, weights['out']) + biases['out']
 
 
@@ -239,20 +249,33 @@ with graph.as_default():
     saver = tf.train.Saver()
     initialization = tf.initialize_all_variables()
 
+
 with tf.Session(graph=graph) as session:
-    if os.path.isfile("abcdefghij/{}.ckpt".format(session_log_name)):
-        saver.restore(session, "abcdefghij/{}.ckpt".format(session_log_name))
+    step = -1
+
+    # logovanie vysledkov
+    if os.path.isfile("logs/{}.ckpt".format(session_log_name)):
+        saver.restore(session, "logs/{}.ckpt".format(session_log_name))
+        logfile = open('logs/{}.txt'.format(session_log_name), 'r+')
+        current_log = logfile.read().split('\n')
+        step_0 = int(current_log[0])
+        arch_size = int(current_log[1])
+        current_log = current_log[arch_size+1:]
+        current_log.reverse()
+        logfile.close()
     else:
         session.run(initialization)
+        logfile = open('logs/{}.txt'.format(session_log_name), 'w')
+        logfile.close()
+        current_log = []
+        step_0 = 0
 
     print('------------------------')
     print('Training {}'.format(session_log_name))
     print('------------------------')
 
-    batch_data_valid = valid_data.data
-    batch_labels_valid = valid_data.labels
+    (batch_data_valid, batch_labels_valid) = valid_data.next_batch()
 
-    step = -1
     continue_training = '1'
     while continue_training == '1':
         step += 1
@@ -266,12 +289,12 @@ with tf.Session(graph=graph) as session:
             [optimizer, loss, prediction], feed_dict=feed_dict)
 
         if step % info_freq == 0:
-            print('Minibatch loss at step {}: {}'.format(step, loss_value))
+            print('Minibatch loss at step {}: {}'.format(step + step_0, loss_value))
             print('Minibatch accuracy:', 100 * accuracy(predictions, batch_labels))
 
             valid_predictions = session.run(
                 prediction,
-                feed_dict={tf_dataset: batch_data_valid, tf_labels: batch_labels_valid,
+                feed_dict={tf_dataset: batch_data_valid,
                            tf_keep_prob_fc: 1}
             )
             print('Validation accuraccy (batch-sized subset)',
@@ -285,9 +308,14 @@ with tf.Session(graph=graph) as session:
             subprocess.call(['spd-say', '" process has finished"'])
             continue_training = (input('Continue? 1/0'))
             # continue_training = '0'
+            if step != 0:
+                current_log.append('Minibatch loss at step {}: {}'.format(step + step_0, loss_value))
+                current_log.append('Minibatch accuracy: '+str(100 * accuracy(predictions, batch_labels)))
+                current_log.append('Validation accuracy (batch-sized subset): '
+                                   + str(100 * accuracy(valid_predictions, batch_labels_valid)))
+                current_log.append('------------------------------------------------------')
 
-    save_path = saver.save(session, "abcdefghij/{}.ckpt".format(session_log_name))
-    # print('Test accuracy: %.1f%%' % accuracy(test_prediction.eval(), test_labels))
+    save_path = saver.save(session, "{}/logs/{}.ckpt".format(url, session_log_name))
 
     results = []
     valid_labels = []
@@ -299,11 +327,24 @@ with tf.Session(graph=graph) as session:
         )))
         valid_labels.append(lab)
 
+
 results = np.array(results).reshape(-1, num_classes)
 valid_labels = np.array(valid_labels).reshape(-1, num_classes)
 
-print('(prediction, true label):',
-      list(zip([np.argmax(r) for r in np.array(results)], [np.argmax(r) for r in np.array(valid_labels)])))
+print('(prediction, true label):', list(zip([np.argmax(r) for r in np.array(results)], [np.argmax(r) for r in np.array(valid_labels)])))
 # print('lab', [np.argmax(r) for r in np.array(valid_labels)])
 
 print('accuracy', accuracy(results, valid_labels))
+current_log.append('Validation accuracy (full) after {} steps: '.format(step+step_0)+str(accuracy(results, valid_labels)))
+current_log.append('------------------------------------------------------')
+
+current_log.reverse()
+logfile = open('logs/{}.txt'.format(session_log_name), 'w')
+logfile.write(str(step + step_0)+'\n')
+logfile.write(str(len(log)+3)+'\n')
+logfile.write('\n'.join(log) + '\n\n\n')
+logfile.write('\n'.join(current_log))
+logfile.close()
+
+
+
