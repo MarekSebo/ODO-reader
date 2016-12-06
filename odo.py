@@ -7,10 +7,10 @@ from loading import DataClass
 from loading import split_images
 
 # PARAMETRE_NN-------------------------------------------
-num_steps = 10
+num_steps = 20
 batch_size = 16
 info_freq = 20
-session_log_name = 'go_5'
+session_log_name = 'go_004'
 
 num_hidden = [120, 80]
 
@@ -177,9 +177,10 @@ with graph.as_default():
         biases[l] = tf.Variable(tf.zeros([num_filters[l]])),
 
     # Model
+    log = []
     def model(data):
         # INPUT je teraz velkosti batch x h x w x ch
-        print('input:', data.get_shape().as_list())
+        log.append('input: ' + str(data.get_shape().as_list()))
         out = data
 
         # ak chces menit konvolucne vrstvy, robi sa to hore pod settings
@@ -188,14 +189,16 @@ with graph.as_default():
             out = tf.nn.conv2d(out, weights[l], [1, strides[l][0], strides[l][1], 1], padding=paddings[l])
             out = tf.nn.relu(out + biases[l])
 
-            print(l, ':', out.get_shape().as_list())
+            log.append('KERNEL=' + str(kernel_sizes[l]) + ' STRIDE=' + str(strides[l]) + ' ' + paddings[l])
+            log.append(l + ': ' + str(out.get_shape().as_list()))
+
         # -------------------------
 
         shape = out.get_shape().as_list()
 
         # reshape:
         out = tf.reshape(out, [-1, shape[1] * shape[2] * shape[3]])
-        print('after reshape:', out.get_shape().as_list())
+        log.append('after reshape: ' + str(out.get_shape().as_list()))
 
         # fully connected
 
@@ -203,15 +206,16 @@ with graph.as_default():
         out = tf.nn.dropout(out, tf_keep_prob_fc)
         out = tf.nn.relu(out)
 
-        print('fc1:', out.get_shape().as_list())
+        log.append('fc1: ' + str(out.get_shape().as_list()))
 
         out = tf.matmul(out, weights['fc2']) + biases['fc2']
         out = tf.nn.dropout(out, tf_keep_prob_fc)
         out = tf.nn.relu(out)
 
-        print('fc2:', out.get_shape().as_list())
+        log.append('fc2: ' + str(out.get_shape().as_list()))
         out = tf.nn.relu(out)
 
+        print('\n'.join(log))
         return tf.matmul(out, weights['out']) + biases['out']
 
 
@@ -230,10 +234,24 @@ with graph.as_default():
 
 
 with tf.Session(graph=graph) as session:
-    if os.path.isfile("abcdefghij/{}.ckpt".format(session_log_name)):
-        saver.restore(session, "abcdefghij/{}.ckpt".format(session_log_name))
+    step = -1
+
+    # logovanie vysledkov
+    if os.path.isfile("logs/{}.ckpt".format(session_log_name)):
+        saver.restore(session, "logs/{}.ckpt".format(session_log_name))
+        logfile = open('logs/{}.txt'.format(session_log_name), 'r+')
+        current_log = logfile.read().split('\n')
+        step_0 = int(current_log[0])
+        arch_size = int(current_log[1])
+        current_log = current_log[arch_size+1:]
+        current_log.reverse()
+        logfile.close()
     else:
         session.run(initialization)
+        logfile = open('logs/{}.txt'.format(session_log_name), 'w')
+        logfile.close()
+        current_log = []
+        step_0 = 0
 
     print('------------------------')
     print('Training {}'.format(session_log_name))
@@ -241,7 +259,6 @@ with tf.Session(graph=graph) as session:
 
     (batch_data_valid, batch_labels_valid) = valid_data.next_batch()
 
-    step = -1
     continue_training = '1'
     while continue_training == '1':
         step += 1
@@ -255,7 +272,7 @@ with tf.Session(graph=graph) as session:
             [optimizer, loss, prediction], feed_dict=feed_dict)
 
         if step % info_freq == 0:
-            print('Minibatch loss at step {}: {}'.format(step, loss_value))
+            print('Minibatch loss at step {}: {}'.format(step + step_0, loss_value))
             print('Minibatch accuracy:', 100 * accuracy(predictions, batch_labels))
 
             valid_predictions = session.run(
@@ -271,11 +288,17 @@ with tf.Session(graph=graph) as session:
         # if step == num_steps: pokracovat = 0
         if (step % num_steps) == 0:
             subprocess.call(['speech-dispatcher'])  # start speech dispatcher
-            subprocess.call(['spd-say', '" process has finished"'])
+            subprocess.call(['spd-say', "Process has finished. Step {}! Do you wish to continue?".format(step+step_0)])
             continue_training = (input('Continue? 1/0'))
             # continue_training = '0'
-    print(os.getcwd())
-    save_path = saver.save(session, "{}/abcdefghij/{}.ckpt".format(url,session_log_name))
+            if step != 0:
+                current_log.append('Minibatch loss at step {}: {}'.format(step + step_0, loss_value))
+                current_log.append('Minibatch accuracy: '+str(100 * accuracy(predictions, batch_labels)))
+                current_log.append('Validation accuracy (batch-sized subset): '
+                                   + str(100 * accuracy(valid_predictions, batch_labels_valid)))
+                current_log.append('------------------------------------------------------')
+
+    save_path = saver.save(session, "{}/logs/{}.ckpt".format(url, session_log_name))
 
     results = []
     valid_labels = []
@@ -295,3 +318,16 @@ print('(prediction, true label):', list(zip([np.argmax(r) for r in np.array(resu
 # print('lab', [np.argmax(r) for r in np.array(valid_labels)])
 
 print('accuracy', accuracy(results, valid_labels))
+current_log.append('Validation accuracy (full) after {} steps: '.format(step+step_0)+str(accuracy(results, valid_labels)))
+current_log.append('------------------------------------------------------')
+
+current_log.reverse()
+logfile = open('logs/{}.txt'.format(session_log_name), 'w')
+logfile.write(str(step + step_0)+'\n')
+logfile.write(str(len(log)+3)+'\n')
+logfile.write('\n'.join(log) + '\n\n\n')
+logfile.write('\n'.join(current_log))
+logfile.close()
+
+
+
