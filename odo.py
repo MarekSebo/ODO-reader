@@ -10,12 +10,12 @@ from loading import split_images
 #
 
 # PARAMETRE_NN-------------------------------------------
-num_steps = 100
+num_steps = 10000
 batch_size = 16
-info_freq = 25
-session_log_name = 'go_deep_7conv'
+info_freq = 50
+session_log_name = input('Name your baby... architecture!')
 
-num_hidden = [120, 80]
+num_hidden = [120]#, 80]
 
 keep_prob_fc = 0.5
 
@@ -166,14 +166,14 @@ with graph.as_default():
                 )
         ),
 
-        'fc2': tf.Variable(tf.truncated_normal(
-                [num_hidden[0],
-                 num_hidden[1]],
-                stddev=np.sqrt(2 / (num_hidden[0])))
-        ),
+        #'fc2': tf.Variable(tf.truncated_normal(
+        #        [num_hidden[0],
+        #         num_hidden[1]],
+        #        stddev=np.sqrt(2 / (num_hidden[0])))
+        #),
 
         'out': tf.Variable(tf.truncated_normal(
-            [num_hidden[1], num_classes], stddev=np.sqrt(2 / (num_hidden[1]))))
+            [num_hidden[0], num_classes], stddev=np.sqrt(2 / (num_hidden[0]))))
     }
 
     # vytvor vahy pre ostatne konvolucne vrstvy
@@ -185,7 +185,7 @@ with graph.as_default():
 
     biases = {
         'fc1': tf.Variable(tf.zeros([num_hidden[0]])),
-        'fc2': tf.Variable(tf.zeros([num_hidden[1]])),
+        #'fc2': tf.Variable(tf.zeros([num_hidden[1]])),
         'out': tf.Variable(tf.zeros([num_classes]))
     }
 
@@ -226,7 +226,7 @@ with graph.as_default():
 
         log.append('fc1: ' + str(out.get_shape().as_list()))
 
-        out = tf.matmul(out, weights['fc2']) + biases['fc2']
+        #out = tf.matmul(out, weights['fc2']) + biases['fc2']
         out = tf.nn.dropout(out, tf_keep_prob_fc)
         out = tf.nn.relu(out)
 
@@ -256,7 +256,12 @@ with tf.Session(graph=graph) as session:
 
     # logovanie vysledkov
     if os.path.isfile("logs/{}.ckpt".format(session_log_name)):
-        saver.restore(session, "logs/{}.ckpt".format(session_log_name))
+        try:
+            saver.restore(session, "logs/{}.ckpt".format(session_log_name))
+        except:
+            print("You probably have changed the model architecture. Please change the 'session_log_name' variable, tooo.")
+            session_log_name = input("Type new session_log_name:")
+            saver.restore(session, "logs/{}.ckpt".format(session_log_name))
         logfile = open('logs/{}.txt'.format(session_log_name), 'r+')
         current_log = logfile.read().split('\n')
         step_0 = int(current_log[0])
