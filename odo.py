@@ -9,7 +9,7 @@ from loading import split_images
 #
 
 # PARAMETRE_NN-------------------------------------------
-num_steps = 10000
+num_steps = 100
 batch_size = 16
 info_freq = 25
 session_log_name = 'go_deep_7conv_2fc'
@@ -26,7 +26,7 @@ cut_height, cut_width = (150, 200)
 # ------------------
 # nacitanie dat
 # url = "/home/andrej/tf/odo/"
-url = "/home/marek/PycharmProjects/ODO_reader_"
+url = "/home/marek/PycharmProjects/ODO_reader_/ODO_reader"
 # url = '/home/katarina/PycharmProjects/TensorFlowTut/ODO_loading'
 
 train_data_size = 6000
@@ -91,10 +91,10 @@ num_filters = {name: num_filters[i] for i, name in enumerate(conv_layer_names)}
 
 strides = [
 
-    (3, 3),
     (2, 2),
     (2, 2),
-    (2, 2),
+    (1, 1),
+    (1, 1),
     (1, 1),
     (1, 1),
     (1, 1)
