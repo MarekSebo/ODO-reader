@@ -10,7 +10,7 @@ from loading import split_images
 #
 
 # PARAMETRE_NN-------------------------------------------
-num_steps = 100
+num_steps = 1000
 batch_size = 16
 info_freq = 25
 session_log_name = 'go_deep_7conv'
