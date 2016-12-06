@@ -2,6 +2,7 @@ import numpy as np
 import os
 import tensorflow as tf
 import subprocess
+import time
 
 from loading import DataClass
 from loading import split_images
@@ -12,7 +13,7 @@ from loading import split_images
 num_steps = 100
 batch_size = 16
 info_freq = 25
-session_log_name = 'go_deep_7conv_2fc'
+session_log_name = 'go_deep_7conv'
 
 num_hidden = [120, 80]
 
@@ -22,7 +23,7 @@ chunk_size = 128
 channels = 3
 
 image_height, image_width = (192, 256)
-cut_height, cut_width = (150, 200)
+cut_height, cut_width = (int(np.floor(0.85*image_height)), int(np.floor(0.85*image_width)) )
 # ------------------
 # nacitanie dat
 # url = "/home/andrej/tf/odo/"
@@ -276,6 +277,10 @@ with tf.Session(graph=graph) as session:
 
     (batch_data_valid, batch_labels_valid) = valid_data.next_batch()
 
+    #Timer
+    cas=time.time() #casovac
+    subprocess.call(['speech-dispatcher'])  # start speech dispatcher
+    step_counter=0
     continue_training = '1'
     while continue_training == '1':
         step += 1
@@ -304,8 +309,10 @@ with tf.Session(graph=graph) as session:
 
         # if step == num_steps: pokracovat = 0
         if (step % num_steps) == 0:
-            subprocess.call(['speech-dispatcher'])  # start speech dispatcher
-            subprocess.call(['spd-say', '" process has finished"'])
+            print("{} steps took {} minutes.".format(num_steps, (time.time()-cas)/60 ))
+            cas=time.time()
+            subprocess.call(['spd-say', '" Oh yeah! Its over, baby! Step {}. Continue? "'.format(num_steps*step_counter)])
+            step_counter += 1
             continue_training = (input('Continue? 1/0'))
             # continue_training = '0'
             if step != 0:
