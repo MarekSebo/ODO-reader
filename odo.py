@@ -11,7 +11,7 @@ from loading import split_images
 #
 
 # PARAMETRE_NN-------------------------------------------
-num_steps = 50
+num_steps = int(input('How many steps?'))
 batch_size = 16
 info_freq = 50
 session_log_name = input('Name your baby... architecture!')
