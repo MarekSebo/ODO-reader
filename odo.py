@@ -25,9 +25,9 @@ image_height, image_width = (192, 256)
 cut_height, cut_width = (int(np.floor(0.85*image_height)), int(np.floor(0.85*image_width)))
 # ------------------
 # nacitanie dat
-url = "/home/andrej/tf/odo/"
+url = "/home/andrej/tf/ODO_reader"
 # url = "/home/marek/PycharmProjects/ODO_reader_/ODO_reader"
-# url = '/home/katarina/PycharmProjects/TensorFlowTut/ODO_loading'
+# url = '/home/katarina/PycharmProjects/TensorFlowTut/ODO_reader'
 
 train_data_size = 6000
 znacky = split_images(url, train_data_size, image_height, image_width)
