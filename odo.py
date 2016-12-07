@@ -3,6 +3,7 @@ import os
 import tensorflow as tf
 import subprocess
 import pandas as pd
+import time
 
 from loading import DataClass
 from loading import split_images
