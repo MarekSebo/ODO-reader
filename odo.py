@@ -2,20 +2,20 @@ import numpy as np
 import os
 import tensorflow as tf
 import subprocess
-import pandas as pd
 import time
 
 from loading import DataClass
 from loading import split_images
 
+#
 
 # PARAMETRE_NN-------------------------------------------
-num_steps = 10
+num_steps = 10000
 batch_size = 16
-info_freq = 10
-session_log_name = 'go_002'
+info_freq = 50
+session_log_name = input('Name your baby... architecture!')
 
-num_hidden = [120, 80]
+num_hidden = [120]#, 80]
 
 keep_prob_fc = 0.5
 
@@ -23,20 +23,15 @@ chunk_size = 128
 channels = 3
 
 image_height, image_width = (192, 256)
-cut_height, cut_width = (150, 200)
+cut_height, cut_width = (int(np.floor(0.85*image_height)), int(np.floor(0.85*image_width)) )
 # ------------------
 # nacitanie dat
-url = "/home/andrej/tf/ODO_reader"
-# url = "/home/marek/PycharmProjects/ODO_reader_/ODO_reader"
+# url = "/home/andrej/tf/odo/"
+url = "/home/marek/PycharmProjects/ODO_reader_/ODO_reader"
 # url = '/home/katarina/PycharmProjects/TensorFlowTut/ODO_loading'
 
 train_data_size = 6000
-
-znacky = split_images(url, train_data_size, image_height, image_width)
-print(znacky)
-num_classes = len(znacky)
-
-print(num_classes)
+num_classes = split_images(url, train_data_size, image_height, image_width)
 
 
 # velkost obrazka po aplikovani conv vrstiev
@@ -66,11 +61,11 @@ def accuracy(predictions, labels):
 train_data = DataClass(os.path.join(url, 'train/'),
                        batch_size, chunk_size, num_classes,
                        image_height, image_width, cut_height, cut_width,
-                       znacky, data_use='train')
+                       data_use='train')
 valid_data = DataClass(os.path.join(url, 'valid/'),
                        batch_size, chunk_size, num_classes,
                        image_height, image_width, cut_height, cut_width,
-                       znacky, data_use='valid')
+                       data_use='valid')
 
 image_height, image_width = (cut_height, cut_width)
 
@@ -171,14 +166,14 @@ with graph.as_default():
                 )
         ),
 
-        'fc2': tf.Variable(tf.truncated_normal(
-                [num_hidden[0],
-                 num_hidden[1]],
-                stddev=np.sqrt(2 / (num_hidden[0])))
-        ),
+        #'fc2': tf.Variable(tf.truncated_normal(
+        #        [num_hidden[0],
+        #         num_hidden[1]],
+        #        stddev=np.sqrt(2 / (num_hidden[0])))
+        #),
 
         'out': tf.Variable(tf.truncated_normal(
-            [num_hidden[1], num_classes], stddev=np.sqrt(2 / (num_hidden[1]))))
+            [num_hidden[0], num_classes], stddev=np.sqrt(2 / (num_hidden[0]))))
     }
 
     # vytvor vahy pre ostatne konvolucne vrstvy
@@ -190,7 +185,7 @@ with graph.as_default():
 
     biases = {
         'fc1': tf.Variable(tf.zeros([num_hidden[0]])),
-        'fc2': tf.Variable(tf.zeros([num_hidden[1]])),
+        #'fc2': tf.Variable(tf.zeros([num_hidden[1]])),
         'out': tf.Variable(tf.zeros([num_classes]))
     }
 
@@ -231,7 +226,7 @@ with graph.as_default():
 
         log.append('fc1: ' + str(out.get_shape().as_list()))
 
-        out = tf.matmul(out, weights['fc2']) + biases['fc2']
+        #out = tf.matmul(out, weights['fc2']) + biases['fc2']
         out = tf.nn.dropout(out, tf_keep_prob_fc)
         out = tf.nn.relu(out)
 
@@ -261,7 +256,12 @@ with tf.Session(graph=graph) as session:
 
     # logovanie vysledkov
     if os.path.isfile("logs/{}.ckpt".format(session_log_name)):
-        saver.restore(session, "logs/{}.ckpt".format(session_log_name))
+        try:
+            saver.restore(session, "logs/{}.ckpt".format(session_log_name))
+        except:
+            print("You probably have changed the model architecture. Please change the 'session_log_name' variable, tooo.")
+            session_log_name = input("Type new session_log_name:")
+            saver.restore(session, "logs/{}.ckpt".format(session_log_name))
         logfile = open('logs/{}.txt'.format(session_log_name), 'r+')
         current_log = logfile.read().split('\n')
         step_0 = int(current_log[0])
@@ -282,6 +282,10 @@ with tf.Session(graph=graph) as session:
 
     (batch_data_valid, batch_labels_valid) = valid_data.next_batch()
 
+    #Timer
+    cas=time.time() #casovac
+    subprocess.call(['speech-dispatcher'])  # start speech dispatcher
+    step_counter=0
     continue_training = '1'
     while continue_training == '1':
         step += 1
@@ -310,8 +314,10 @@ with tf.Session(graph=graph) as session:
 
         # if step == num_steps: pokracovat = 0
         if (step % num_steps) == 0:
-            subprocess.call(['speech-dispatcher'])  # start speech dispatcher
-            subprocess.call(['spd-say', '" process has finished, do you wish to continue? I\'m blue da ba dee da ba di. "'])
+            print("{} steps took {} minutes.".format(num_steps, (time.time()-cas)/60 ))
+            cas=time.time()
+            subprocess.call(['spd-say', '" Oh yeah! Its over, baby! Step {}. Continue? "'.format(num_steps*step_counter)])
+            step_counter += 1
             continue_training = (input('Continue? 1/0'))
             # continue_training = '0'
             if step != 0:
@@ -340,19 +346,6 @@ valid_labels = np.array(valid_labels).reshape(-1, num_classes)
 print('(prediction, true label):', list(zip([np.argmax(r) for r in np.array(results)], [np.argmax(r) for r in np.array(valid_labels)])))
 # print('lab', [np.argmax(r) for r in np.array(valid_labels)])
 
-df = pd.DataFrame(znacky)
-
-df['pred'] = [[znacky[np.argmax(r)] for r in np.array(results)].count(zn) for zn in znacky]
-df['pred_pc'] = np.array([[znacky[np.argmax(r)] for r in results].count(zn) for zn in znacky]) / results.shape[0]
-df['tr_lbls'] = [train_data.all_labels.count(zn) for zn in znacky]
-df['tr_lbls_pc'] = np.array([train_data.all_labels.count(zn) for zn in znacky])\
-                            / len(train_data.all_labels)
-df['val_lbls'] = [[znacky[np.argmax(r)] for r in valid_labels].count(zn) for zn in znacky]
-df['val_lbls_pc'] = np.array([[znacky[np.argmax(r)] for r in valid_labels].count(zn) for zn in znacky])\
-                            / valid_labels.shape[0]
-
-print(df)
-
 print('accuracy', accuracy(results, valid_labels))
 current_log.append('Validation accuracy (full) after {} steps: '.format(step+step_0)+str(accuracy(results, valid_labels)))
 current_log.append('------------------------------------------------------')
@@ -364,6 +357,3 @@ logfile.write(str(len(log)+3)+'\n')
 logfile.write('\n'.join(log) + '\n\n\n')
 logfile.write('\n'.join(current_log))
 logfile.close()
-
-
-
