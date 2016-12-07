@@ -364,6 +364,3 @@ logfile.write(str(len(log)+3)+'\n')
 logfile.write('\n'.join(log) + '\n\n\n')
 logfile.write('\n'.join(current_log))
 logfile.close()
-
-
-
