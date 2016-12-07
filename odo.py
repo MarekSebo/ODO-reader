@@ -9,10 +9,10 @@ from loading import DataClass
 from loading import split_images
 
 # PARAMETRE_NN-------------------------------------------
-num_steps = int(input('How many steps?'))
+num_steps = 500  #int(input('How many steps?'))
 batch_size = 16
 info_freq = 25
-session_log_name = input('Name your baby... architecture!')
+session_log_name = 'godaddy1'  #input('Name your baby... architecture!')
 
 num_hidden = [120]
 
@@ -74,21 +74,24 @@ image_height, image_width = (cut_height, cut_width)
 ###############################
 # CONVOLUTION LAYERS SETTINGS #
 ###############################
-conv_layer_names = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5', 'conv6', 'conv7']
+conv_layer_names = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5', 'conv6', 'conv7', 'conv8', 'conv9', 'conv10']
 
 kernel_sizes = [
     (4, 4),
+    (3, 5),
     (3, 3),
     (3, 3),
     (3, 3),
     (3, 3),
     (3, 3),
-    (3, 3)
+    (3, 5),
+    (3, 5),
+    (3, 5)
 ]
 kernel_sizes = {name: kernel_sizes[i] for i, name in enumerate(conv_layer_names)}
 
 num_filters = [
-    16, 32, 48, 64, 64, 64, 64
+    16, 32, 48, 64, 64, 64, 64, 64, 64, 64
 ]
 num_filters = {name: num_filters[i] for i, name in enumerate(conv_layer_names)}
 
@@ -96,6 +99,9 @@ strides = [
 
     (2, 2),
     (2, 2),
+    (2, 2),
+    (1, 1),
+    (1, 1),
     (1, 1),
     (1, 1),
     (1, 1),
@@ -105,6 +111,9 @@ strides = [
 strides = {name: strides[i] for i, name in enumerate(conv_layer_names)}
 
 paddings = [
+    'VALID',
+    'VALID',
+    'VALID',
     'VALID',
     'VALID',
     'VALID',
@@ -134,6 +143,8 @@ for i, layer in enumerate(conv_layer_names):
             kernel_sizes[layer][0], kernel_sizes[layer][1]
         )
 
+print('output sizes', output_sizes['conv10'])
+
 # DICTIONARY SIZE CHECK CONV LAYERS
 assert (len(conv_layer_names)
         == len(paddings)
@@ -146,6 +157,7 @@ assert (len(conv_layer_names)
               len(conv_layer_names), len(paddings), len(strides),
               len(num_filters), len(kernel_sizes), len(output_sizes)
               )
+# ------------------------------------------------------------------------------------------------------------------
 
 graph = tf.Graph()
 
@@ -164,16 +176,16 @@ with graph.as_default():
             stddev=np.sqrt(2 / (kernel_sizes['conv1'][0] * kernel_sizes['conv1'][1] * channels)))
         ),
 
-        'fc1': tf.Variable(tf.truncated_normal(
-            [output_sizes[conv_layer_names[-1]][0] * output_sizes[conv_layer_names[-1]][1] * num_filters[
-                conv_layer_names[-1]],
-             num_hidden[0]],
-            stddev=np.sqrt(2 / (
-                    output_sizes[conv_layer_names[-1]][0]
-                    * output_sizes[conv_layer_names[-1]][1]
-                    * num_filters[conv_layer_names[-1]]))
-                )
-        ),
+        # 'fc1': tf.Variable(tf.truncated_normal(
+        #     [output_sizes[conv_layer_names[-1]][0] * output_sizes[conv_layer_names[-1]][1] * num_filters[
+        #         conv_layer_names[-1]],
+        #      num_hidden[0]],
+        #     stddev=np.sqrt(2 / (
+        #             output_sizes[conv_layer_names[-1]][0]
+        #             * output_sizes[conv_layer_names[-1]][1]
+        #             * num_filters[conv_layer_names[-1]]))
+        #         )
+        # ),
 
         # 'fc2': tf.Variable(tf.truncated_normal(
         #        [num_hidden[0],
@@ -182,7 +194,7 @@ with graph.as_default():
         # ),
 
         'out': tf.Variable(tf.truncated_normal(
-            [num_hidden[0], num_classes], stddev=np.sqrt(2 / (num_hidden[0]))))
+            [num_filters[conv_layer_names[-1]], num_classes], stddev=np.sqrt(2 / (num_filters[conv_layer_names[-1]]))))
     }
 
     # vytvor vahy pre ostatne konvolucne vrstvy
@@ -193,10 +205,10 @@ with graph.as_default():
         )
 
     biases = {
-        'fc1': tf.Variable(tf.zeros([num_hidden[0]])),
+        # 'fc1': tf.Variable(tf.zeros([num_hidden[0]])),
         # 'fc2': tf.Variable(tf.zeros([num_hidden[1]])),
         'out': tf.Variable(tf.zeros([num_classes]))
-    }
+        }
 
     # vytvor biasy pre ostatne konvolucne vrstvy
     for l in conv_layer_names:
@@ -223,24 +235,29 @@ with graph.as_default():
 
         shape = out.get_shape().as_list()
 
+        # avg pooling
+        out = tf.nn.avg_pool(out, [1, shape[1], shape[2], 1], [1, 1, 1, 1], 'VALID')
+        shape = out.get_shape().as_list()
+        log.append('average pooling: ' + str(out.get_shape().as_list()))
+
         # reshape:
         out = tf.reshape(out, [-1, shape[1] * shape[2] * shape[3]])
         log.append('after reshape: ' + str(out.get_shape().as_list()))
 
         # fully connected
 
-        out = tf.matmul(out, weights['fc1']) + biases['fc1']
-        out = tf.nn.dropout(out, tf_keep_prob_fc)
-        out = tf.nn.relu(out)
-
-        log.append('fc1: ' + str(out.get_shape().as_list()))
-
-        # out = tf.matmul(out, weights['fc2']) + biases['fc2']
-        out = tf.nn.dropout(out, tf_keep_prob_fc)
-        out = tf.nn.relu(out)
-
-        log.append('fc2: ' + str(out.get_shape().as_list()))
-        out = tf.nn.relu(out)
+        # out = tf.matmul(out, weights['fc1']) + biases['fc1']
+        # out = tf.nn.dropout(out, tf_keep_prob_fc)
+        # out = tf.nn.relu(out)
+        #
+        # log.append('fc1: ' + str(out.get_shape().as_list()))
+        #
+        # # out = tf.matmul(out, weights['fc2']) + biases['fc2']
+        # out = tf.nn.dropout(out, tf_keep_prob_fc)
+        # out = tf.nn.relu(out)
+        #
+        # log.append('fc2: ' + str(out.get_shape().as_list()))
+        # out = tf.nn.relu(out)
 
         print('\n'.join(log))
         return tf.matmul(out, weights['out']) + biases['out']
@@ -295,7 +312,6 @@ with tf.Session(graph=graph) as session:
     # Timer
     cas = time.time()  # casovac
     subprocess.call(['speech-dispatcher'])  # start speech dispatcher
-    step_counter = 0
     continue_training = '1'
     while continue_training == '1':
         step += 1
@@ -325,10 +341,9 @@ with tf.Session(graph=graph) as session:
         # if step == num_steps: pokracovat = 0
         if (step % num_steps) == 0:
             print("{} steps took {} minutes.".format(num_steps, (time.time()-cas)/60))
-            cas = time.time()
-            subprocess.call(['spd-say', 'Oh yeah! Its over, baby! Step {}. Continue?'.format(num_steps*step_counter)])
-            step_counter += 1
+            subprocess.call(['spd-say', 'Oh yeah! Its over, baby! Step {}. Continue?'.format(step + step_0)])
             continue_training = (input('Continue? 1/0'))
+            cas = time.time()
             # continue_training = '0'
             if step != 0:
                 current_log.append('Minibatch loss at step {}: {}'.format(step + step_0, loss_value))
