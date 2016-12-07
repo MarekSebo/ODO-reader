@@ -10,10 +10,10 @@ from loading import split_images
 #
 
 # PARAMETRE_NN-------------------------------------------
-num_steps = 10
+num_steps = 50
 batch_size = 16
 info_freq = 10
-session_log_name = 'go_002'
+session_log_name = 'go_004'
 
 num_hidden = [120, 80]
 
@@ -315,10 +315,10 @@ with tf.Session(graph=graph) as session:
             continue_training = (input('Continue? 1/0'))
             # continue_training = '0'
             if step != 0:
-                current_log.append('Minibatch loss at step {}: {}'.format(step + step_0, loss_value))
-                current_log.append('Minibatch accuracy: '+str(100 * accuracy(predictions, batch_labels)))
                 current_log.append('Validation accuracy (batch-sized subset): '
                                    + str(100 * accuracy(valid_predictions, batch_labels_valid)))
+                current_log.append('Minibatch accuracy: ' + str(100 * accuracy(predictions, batch_labels)))
+                current_log.append('Minibatch loss at step {}: {}'.format(step + step_0, loss_value))
                 current_log.append('------------------------------------------------------')
 
     save_path = saver.save(session, "{}/logs/{}.ckpt".format(url, session_log_name))
