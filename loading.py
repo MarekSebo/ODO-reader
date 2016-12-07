@@ -36,12 +36,6 @@ class DataClass(object):
     -batche sa vzdy beru zaradom z aktualneho chunku
     -ked sa minie chunk (dojde sa na koniec), nacita sa novy chunk
     -ked sa minu chunky, premiesaju sa data a zacne sa znova
-
-    TODO
-    -zatial sa obrazky pri novom chunku vzdy nacitavaju, reshapuju, padduju
-    -mohlo by byt vyhodne pouzit jeden chunk viackrat, ked uz ho mam nacitany
-    -spravit podclasses na test, train a validation sety
-    -idealne ich ulozit do zvlast priecinkov
     """
     def __init__(self, path, batch_size, chunk_size, num_class, h, w, cut_h, cut_w, car_makes, data_use="train"):
         self.data = None
