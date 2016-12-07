@@ -9,7 +9,7 @@ from loading import DataClass
 from loading import split_images
 
 # PARAMETRE_NN-------------------------------------------
-num_steps = 500  #int(input('How many steps?'))
+num_steps = 5  #int(input('How many steps?'))
 batch_size = 16
 info_freq = 25
 session_log_name = 'godaddy1'  #input('Name your baby... architecture!')
@@ -20,6 +20,7 @@ keep_prob_fc = 0.5
 
 chunk_size = 128
 channels = 3
+learning_rate = 0.0001
 
 image_height, image_width = (192, 256)
 cut_height, cut_width = (int(np.floor(0.85*image_height)), int(np.floor(0.85*image_width)))
@@ -269,7 +270,7 @@ with graph.as_default():
     loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(output, tf_labels))
 
     # Optimizer.
-    optimizer = tf.train.AdamOptimizer(learning_rate=0.0001, beta1=0.9, beta2=0.999, epsilon=1e-08).minimize(loss)
+    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=0.9, beta2=0.999, epsilon=1e-08).minimize(loss)
 
     prediction = tf.nn.softmax(output)
 
@@ -388,6 +389,8 @@ current_log.append('Validation accuracy (full) after {} steps: '.format(step+ste
                    + str(accuracy(results, valid_labels)))
 current_log.append('------------------------------------------------------')
 
+log.append('batch size: {}'.format(batch_size))
+log.append('learning rate: {}'.format(learning_rate))
 current_log.reverse()
 logfile = open('logs/{}.txt'.format(session_log_name), 'w')
 logfile.write(str(step + step_0)+'\n')
