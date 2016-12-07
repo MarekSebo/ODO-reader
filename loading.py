@@ -80,15 +80,16 @@ class DataClass(object):
             im = pilimg.open(os.path.join(self.path, f))
 
             if self.data_use == "train":
-                # random crop
-                x = random.randint(self.w - self.cut_w)
-                y = random.randint(self.h - self.cut_h)
-            else:
-                # central crop
-                x = (self.w - self.cut_w) // 2
-                y = (self.h - self.cut_h) // 2
-
-            im = im.crop((x, y, x + self.cut_w, y + self.cut_h))
+                # random crop or reshape
+                if random.randint(0, 2) == 0:
+                    x = random.randint(self.w - self.cut_w)
+                    y = random.randint(self.h - self.cut_h)
+                    im = im.crop((x, y, x + self.cut_w, y + self.cut_h))
+                else:
+                    im = im.resize((self.cut_w, self.cut_h))
+            else:  #validacne data
+                # no crop
+                im = im.resize((self.cut_w, self.cut_h))
 
             im = np.array(im).astype(float) / 255
             chunk_imgs.append(im)
