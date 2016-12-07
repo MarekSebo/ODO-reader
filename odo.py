@@ -8,15 +8,13 @@ import pandas as pd
 from loading import DataClass
 from loading import split_images
 
-#
-
 # PARAMETRE_NN-------------------------------------------
 num_steps = 50
 batch_size = 16
-info_freq = 50
+info_freq = 25
 session_log_name = input('Name your baby... architecture!')
 
-num_hidden = [120]#, 80]
+num_hidden = [120]
 
 keep_prob_fc = 0.5
 
@@ -24,11 +22,11 @@ chunk_size = 128
 channels = 3
 
 image_height, image_width = (192, 256)
-cut_height, cut_width = (int(np.floor(0.85*image_height)), int(np.floor(0.85*image_width)) )
+cut_height, cut_width = (int(np.floor(0.85*image_height)), int(np.floor(0.85*image_width)))
 # ------------------
 # nacitanie dat
-# url = "/home/andrej/tf/odo/"
-url = "/home/marek/PycharmProjects/ODO_reader_/ODO_reader"
+url = "/home/andrej/tf/odo/"
+# url = "/home/marek/PycharmProjects/ODO_reader_/ODO_reader"
 # url = '/home/katarina/PycharmProjects/TensorFlowTut/ODO_loading'
 
 train_data_size = 6000
@@ -136,11 +134,18 @@ for i, layer in enumerate(conv_layer_names):
             kernel_sizes[layer][0], kernel_sizes[layer][1]
         )
 
-#DICTIONARY SIZE CHECK CONV LAYERS
-assert (len(conv_layer_names) == len(paddings) == len(strides) == len(num_filters) == len(kernel_sizes) == len(output_sizes)), print\
-    ("Error: sizes of parameter dictionaries of conv layers dont't match. "
-      "Printing len [conv_layer_names, paddings, strides,num_filers, kernel_sizes, output_sizes]",
-      len(conv_layer_names), len(paddings), len(strides),len(num_filters), len(kernel_sizes), len(output_sizes)      )
+# DICTIONARY SIZE CHECK CONV LAYERS
+assert (len(conv_layer_names)
+        == len(paddings)
+        == len(strides)
+        == len(num_filters)
+        == len(kernel_sizes)
+        == len(output_sizes)), \
+        print("Error: sizes of parameter dictionaries of conv layers dont't match. "
+              "Printing len [conv_layer_names, paddings, strides,num_filers, kernel_sizes, output_sizes]",
+              len(conv_layer_names), len(paddings), len(strides),
+              len(num_filters), len(kernel_sizes), len(output_sizes)
+              )
 
 graph = tf.Graph()
 
@@ -170,11 +175,11 @@ with graph.as_default():
                 )
         ),
 
-        #'fc2': tf.Variable(tf.truncated_normal(
+        # 'fc2': tf.Variable(tf.truncated_normal(
         #        [num_hidden[0],
         #         num_hidden[1]],
         #        stddev=np.sqrt(2 / (num_hidden[0])))
-        #),
+        # ),
 
         'out': tf.Variable(tf.truncated_normal(
             [num_hidden[0], num_classes], stddev=np.sqrt(2 / (num_hidden[0]))))
@@ -189,7 +194,7 @@ with graph.as_default():
 
     biases = {
         'fc1': tf.Variable(tf.zeros([num_hidden[0]])),
-        #'fc2': tf.Variable(tf.zeros([num_hidden[1]])),
+        # 'fc2': tf.Variable(tf.zeros([num_hidden[1]])),
         'out': tf.Variable(tf.zeros([num_classes]))
     }
 
@@ -197,9 +202,9 @@ with graph.as_default():
     for l in conv_layer_names:
         biases[l] = tf.Variable(tf.zeros([num_filters[l]])),
 
-
     # Model
     log = []
+
     def model(data):
         # INPUT je teraz velkosti batch x h x w x ch
         log.append('input: ' + str(data.get_shape().as_list()))
@@ -230,7 +235,7 @@ with graph.as_default():
 
         log.append('fc1: ' + str(out.get_shape().as_list()))
 
-        #out = tf.matmul(out, weights['fc2']) + biases['fc2']
+        # out = tf.matmul(out, weights['fc2']) + biases['fc2']
         out = tf.nn.dropout(out, tf_keep_prob_fc)
         out = tf.nn.relu(out)
 
@@ -263,7 +268,8 @@ with tf.Session(graph=graph) as session:
         try:
             saver.restore(session, "logs/{}.ckpt".format(session_log_name))
         except:
-            print("You probably have changed the model architecture. Please change the 'session_log_name' variable, tooo.")
+            print("You probably have changed the model architecture."
+                  " Please change the 'session_log_name' variable, tooo.")
             session_log_name = input("Type new session_log_name:")
             saver.restore(session, "logs/{}.ckpt".format(session_log_name))
         logfile = open('logs/{}.txt'.format(session_log_name), 'r+')
@@ -286,10 +292,10 @@ with tf.Session(graph=graph) as session:
 
     (batch_data_valid, batch_labels_valid) = valid_data.next_batch()
 
-    #Timer
-    cas=time.time() #casovac
+    # Timer
+    cas = time.time()  # casovac
     subprocess.call(['speech-dispatcher'])  # start speech dispatcher
-    step_counter=0
+    step_counter = 0
     continue_training = '1'
     while continue_training == '1':
         step += 1
@@ -318,9 +324,9 @@ with tf.Session(graph=graph) as session:
 
         # if step == num_steps: pokracovat = 0
         if (step % num_steps) == 0:
-            print("{} steps took {} minutes.".format(num_steps, (time.time()-cas)/60 ))
-            cas=time.time()
-            subprocess.call(['spd-say', '" Oh yeah! Its over, baby! Step {}. Continue? "'.format(num_steps*step_counter)])
+            print("{} steps took {} minutes.".format(num_steps, (time.time()-cas)/60))
+            cas = time.time()
+            subprocess.call(['spd-say', 'Oh yeah! Its over, baby! Step {}. Continue?'.format(num_steps*step_counter)])
             step_counter += 1
             continue_training = (input('Continue? 1/0'))
             # continue_training = '0'
@@ -347,7 +353,8 @@ with tf.Session(graph=graph) as session:
 results = np.array(results).reshape(-1, num_classes)
 valid_labels = np.array(valid_labels).reshape(-1, num_classes)
 
-print('(prediction, true label):', list(zip([np.argmax(r) for r in np.array(results)], [np.argmax(r) for r in np.array(valid_labels)])))
+print('(prediction, true label):', list(zip([np.argmax(r) for r in np.array(results)],
+                                            [np.argmax(r) for r in np.array(valid_labels)])))
 # print('lab', [np.argmax(r) for r in np.array(valid_labels)])
 
 df = pd.DataFrame(znacky)
@@ -362,7 +369,8 @@ df['val_lbls_pc'] = np.array([[znacky[np.argmax(r)] for r in valid_labels].count
 print(df)
 
 print('accuracy', accuracy(results, valid_labels))
-current_log.append('Validation accuracy (full) after {} steps: '.format(step+step_0)+str(accuracy(results, valid_labels)))
+current_log.append('Validation accuracy (full) after {} steps: '.format(step+step_0)
+                   + str(accuracy(results, valid_labels)))
 current_log.append('------------------------------------------------------')
 
 current_log.reverse()

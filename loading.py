@@ -106,9 +106,7 @@ class DataClass(object):
         return np.array(chunk_imgs), np.array(chunk_labels)
 
     def next_chunk(self):
-        print('Getting new chunk')
         self.data, self.labels = self.load_chunk()
-        print('Got it')
 
     def next_batch(self):
         data = self.data[self.batch_cursor:self.batch_cursor + self.batch_size]
