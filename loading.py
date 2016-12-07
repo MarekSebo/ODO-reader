@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import pandas as pd
 from PIL import Image as pilimg
 from numpy import random
 
@@ -17,8 +18,12 @@ def split_images(url, split, h, w):
             im = im.resize((w, h))
             im.save(os.path.join(url, 'valid/', f))
 
-    num_classes = len(list(set([f.split("_")[1] for f in all_img])))
-    return num_classes
+    znacky = (list(set([f.split("_")[1] for f in all_img])))
+    znacky.remove("S▌Мkoda")
+    znacky.sort()
+
+    return znacky
+
 
 class DataClass(object):
     """
@@ -38,13 +43,14 @@ class DataClass(object):
     -spravit podclasses na test, train a validation sety
     -idealne ich ulozit do zvlast priecinkov
     """
-    def __init__(self, path, batch_size, chunk_size, num_class, h, w, cut_h, cut_w, data_use="train"):
+    def __init__(self, path, batch_size, chunk_size, num_class, h, w, cut_h, cut_w, car_makes, data_use="train"):
         self.data = None
         self.labels = None
 
         self.path = path
         self.data_use = data_use
         self.num_class = num_class
+        self.car_makes = car_makes
 
         self.h = h
         self.w = w
@@ -62,12 +68,11 @@ class DataClass(object):
 
         self.next_chunk()
 
-
     def load_filenames(self):
         all_img = os.listdir(self.path)
         names = all_img
-        self.car_makes = list(set([f.split("_")[1] for f in all_img]))
-        print(self.car_makes)
+        self.all_labels = [f.split("_")[1] for f in all_img]
+        self.all_labels = [l if l != "S▌Мkoda" else "Škoda" for l in self.all_labels]
         return names
 
     def shuffle(self):
@@ -85,7 +90,7 @@ class DataClass(object):
                 x = random.randint(self.w - self.cut_w)
                 y = random.randint(self.h - self.cut_h)
             else:
-                #central crop
+                # central crop
                 x = (self.w - self.cut_w) // 2
                 y = (self.h - self.cut_h) // 2
 
@@ -107,9 +112,9 @@ class DataClass(object):
         return np.array(chunk_imgs), np.array(chunk_labels)
 
     def next_chunk(self):
-        #print('Getting new chunk')
+        print('Getting new chunk')
         self.data, self.labels = self.load_chunk()
-        #print('Got it')
+        print('Got it')
 
     def next_batch(self):
         data = self.data[self.batch_cursor:self.batch_cursor + self.batch_size]
@@ -129,5 +134,6 @@ class DataClass(object):
 
     def labels_to_onehot(self, lab):
         onehots = np.zeros(self.num_class)
-        onehots[self.car_makes.index(lab)]=1
+        if lab=="S▌Мkoda": lab = "Škoda"
+        onehots[self.car_makes.index(lab)] = 1
         return list(onehots)
