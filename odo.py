@@ -7,7 +7,6 @@ import pandas as pd
 from loading import DataClass
 from loading import split_images
 
-#
 
 # PARAMETRE_NN-------------------------------------------
 num_steps = 10
