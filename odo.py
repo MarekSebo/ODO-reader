@@ -2,6 +2,7 @@ import numpy as np
 import os
 import tensorflow as tf
 import subprocess
+import pandas as pd
 
 from loading import DataClass
 from loading import split_images
@@ -9,10 +10,10 @@ from loading import split_images
 #
 
 # PARAMETRE_NN-------------------------------------------
-num_steps = 100
+num_steps = 10
 batch_size = 16
-info_freq = 25
-session_log_name = 'go_deep_7conv_2fc'
+info_freq = 10
+session_log_name = 'go_002'
 
 num_hidden = [120, 80]
 
@@ -25,12 +26,17 @@ image_height, image_width = (192, 256)
 cut_height, cut_width = (150, 200)
 # ------------------
 # nacitanie dat
-# url = "/home/andrej/tf/odo/"
-url = "/home/marek/PycharmProjects/ODO_reader_/ODO_reader"
+url = "/home/andrej/tf/ODO_reader"
+# url = "/home/marek/PycharmProjects/ODO_reader_/ODO_reader"
 # url = '/home/katarina/PycharmProjects/TensorFlowTut/ODO_loading'
 
 train_data_size = 6000
-num_classes = split_images(url, train_data_size, image_height, image_width)
+
+znacky = split_images(url, train_data_size, image_height, image_width)
+print(znacky)
+num_classes = len(znacky)
+
+print(num_classes)
 
 
 # velkost obrazka po aplikovani conv vrstiev
@@ -60,11 +66,11 @@ def accuracy(predictions, labels):
 train_data = DataClass(os.path.join(url, 'train/'),
                        batch_size, chunk_size, num_classes,
                        image_height, image_width, cut_height, cut_width,
-                       data_use='train')
+                       znacky, data_use='train')
 valid_data = DataClass(os.path.join(url, 'valid/'),
                        batch_size, chunk_size, num_classes,
                        image_height, image_width, cut_height, cut_width,
-                       data_use='valid')
+                       znacky, data_use='valid')
 
 image_height, image_width = (cut_height, cut_width)
 
@@ -305,7 +311,7 @@ with tf.Session(graph=graph) as session:
         # if step == num_steps: pokracovat = 0
         if (step % num_steps) == 0:
             subprocess.call(['speech-dispatcher'])  # start speech dispatcher
-            subprocess.call(['spd-say', '" process has finished"'])
+            subprocess.call(['spd-say', '" process has finished, do you wish to continue? I\'m blue da ba dee da ba di. "'])
             continue_training = (input('Continue? 1/0'))
             # continue_training = '0'
             if step != 0:
@@ -333,6 +339,19 @@ valid_labels = np.array(valid_labels).reshape(-1, num_classes)
 
 print('(prediction, true label):', list(zip([np.argmax(r) for r in np.array(results)], [np.argmax(r) for r in np.array(valid_labels)])))
 # print('lab', [np.argmax(r) for r in np.array(valid_labels)])
+
+df = pd.DataFrame(znacky)
+
+df['pred'] = [[znacky[np.argmax(r)] for r in np.array(results)].count(zn) for zn in znacky]
+df['pred_pc'] = np.array([[znacky[np.argmax(r)] for r in results].count(zn) for zn in znacky]) / results.shape[0]
+df['tr_lbls'] = [train_data.all_labels.count(zn) for zn in znacky]
+df['tr_lbls_pc'] = np.array([train_data.all_labels.count(zn) for zn in znacky])\
+                            / len(train_data.all_labels)
+df['val_lbls'] = [[znacky[np.argmax(r)] for r in valid_labels].count(zn) for zn in znacky]
+df['val_lbls_pc'] = np.array([[znacky[np.argmax(r)] for r in valid_labels].count(zn) for zn in znacky])\
+                            / valid_labels.shape[0]
+
+print(df)
 
 print('accuracy', accuracy(results, valid_labels))
 current_log.append('Validation accuracy (full) after {} steps: '.format(step+step_0)+str(accuracy(results, valid_labels)))
