@@ -95,7 +95,7 @@ kernel_sizes = [
 kernel_sizes = {name: kernel_sizes[i] for i, name in enumerate(conv_layer_names)}
 
 num_filters = [
-    16, 32, 48, 64, 64, 64, 64, 64, 64, 64
+    16, 32, 48, 64, 64, 64, 64, 128, 128, 128
 ]
 num_filters = {name: num_filters[i] for i, name in enumerate(conv_layer_names)}
 
@@ -346,7 +346,7 @@ with tf.Session(graph=graph) as session:
         # if step == num_steps: pokracovat = 0
         if (step % num_steps) == 0:
             print("{} steps took {} minutes.".format(num_steps, (time.time()-cas)/60))
-            subprocess.call(['spd-say', 'Oh yeah! Its over, baby! Step {}. Continue?'.format(step + step_0)])
+            subprocess.call(['spd-say', 'Oh yeah! Go Johnny Go, Go! Step {}. Continue?'.format(step + step_0)])
             continue_training = (input('Continue? 1/0'))
             cas = time.time()
             # continue_training = '0'

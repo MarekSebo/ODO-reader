@@ -4,18 +4,25 @@ import pandas as pd
 from PIL import Image as pilimg
 from numpy import random
 
+def file_to_model(f):
+    if f.split("_")[1] == "Alfa":  # or f.split("_")[1] == "Land":
+        model = f.split("_")[1] + '_' + f.split('_')[4].split('-')[0] + '_' + f.split('_')[4].split('-')[1]
+    else:
+        model = f.split("_")[1] + '_' + f.split('_')[4].split('-')[0]
+    return model
 
 def zoznam_tried(url, trieda):
     # trieda = {'znacky', 'modely'}
     all_img = os.listdir(os.path.join(url, 'images/'))
 
     if(trieda == 'znacky'):
-        triedy = (list(set([f.split("_")[1] for f in all_img])))
+        triedy = [f.split("_")[1] for f in all_img]
     elif(trieda == 'modely'):
-        triedy = (list(set([f.split("_")[1] + '_' + f.split('_')[4].split('-')[0] for f in all_img])))
+        triedy = [file_to_model(f) for f in all_img]
     else:
         print("Error: zle zadanie triedy aut. oprav v kode ty dilino!")
         return
+    triedy = list(set(triedy))
     triedy.sort()
 
     return triedy
@@ -47,7 +54,6 @@ def split_images(url, train_perc, h, w):
             im = pilimg.open(os.path.join(url, 'images/', f))
             im = im.resize((w, h))
             im.save(os.path.join(url, 'valid/', f))
-    return
 
 
 def split_images_equal(url, train_perc, h, w, trieda):
@@ -108,8 +114,6 @@ def split_images_equal(url, train_perc, h, w, trieda):
     print("V train_equal directory je {} percent dat.".format(
         100 * len(os.listdir(os.path.join(url, 'train_equal/'))) / len(all_img)))
 
-    return
-
 
 class DataClass(object):
     """
@@ -151,9 +155,8 @@ class DataClass(object):
     def load_filenames(self):
         all_img = os.listdir(self.path)
         names = all_img
-        self.all_labels = [f.split("_")[1] for f in all_img]
-        self.all_labels = [l if l != "S▌Мkoda" else "Škoda" for l in self.all_labels]
-        return names
+        self.all_labels = [file_to_model(f) for f in all_img]
+        return np.array(names)
 
     def shuffle(self):
         random.shuffle(self.file_names)
@@ -179,7 +182,8 @@ class DataClass(object):
 
             im = np.array(im).astype(float) / 255
             chunk_imgs.append(im)
-            chunk_labels.append(self.labels_to_onehot(f.split("_")[1]))
+            chunk_labels.append(self.labels_to_onehot(file_to_model(f)))
+            print(f, file_to_model(f))
         self.chunk_cursor = (self.chunk_cursor + self.chunk_size)
 
         self.current_chunk_size = len(chunk_imgs)
@@ -215,6 +219,5 @@ class DataClass(object):
 
     def labels_to_onehot(self, lab):
         onehots = np.zeros(self.num_class)
-        if lab=="S▌Мkoda": lab = "Škoda"
         onehots[self.car_makes.index(lab)] = 1
         return list(onehots)
