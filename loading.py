@@ -11,8 +11,40 @@ def file_to_model(f):
         model = f.split("_")[1] + '_' + f.split('_')[4].split('-')[0]
     return model
 
-def split_images(url, split, h, w):
+def zoznam_znaciek(url, trieda):
+    # znacky = {'znacky', 'modely'}
     all_img = os.listdir(os.path.join(url, 'images/'))
+
+    if(trieda == 'znacky'):
+        znacky = [f.split("_")[1] for f in all_img]
+    elif(trieda == 'modely'):
+        print("Error: treba dorobit funkciu 'zoznam_znaciek' pre MODELY")
+        znacky = [file_to_model(f) for f in all_img]
+    else:
+        print("Error: zle zadanie triedy aut. oprav v kode ty dilino!")
+        return
+    znacky = list(set(znacky))
+    znacky.sort()
+
+    return znacky
+
+def split_images(url, train_perc, h, w, trieda):
+    #h, w - height, width obrazkov (ak chceme resize)
+
+    #vytvor foldre ak nie su
+    dir_train=os.path.join(url, 'train/')
+    if not os.path.exists(dir_train):
+        os.mkdir(dir_train)
+    dir_valid = os.path.join(url, 'valid/')
+    if not os.path.exists(dir_valid):
+        os.mkdir(dir_valid)
+
+    #rozdel a resizni obrazky
+    all_img = os.listdir(os.path.join(url, 'images/'))
+    print("I have found {} images in directory {}. I will allocate {} percent of them in train dataset".format(
+        len(all_img), url, train_perc * 100))
+    #index posledneho train obrazku
+    split = int(np.floor(train_perc *len(all_img)))
     if len(os.listdir(os.path.join(url, 'train/'))) != split:
         for f in all_img[:split]:
             im = pilimg.open(os.path.join(url, 'images/', f))
@@ -24,11 +56,62 @@ def split_images(url, split, h, w):
             im = im.resize((w, h))
             im.save(os.path.join(url, 'valid/', f))
 
-    znacky = [file_to_model(f) for f in all_img]
-    znacky = list(set(znacky))
-    znacky.sort()
 
-    return znacky
+def split_images_equal(url, train_perc, h, w,trieda):
+    #split - pocet trenovacich dat
+    #h, w - height, width obrazkov (ak chceme resize)
+
+    # vytvor foldre ak nie su
+    dir_train = os.path.join(url, 'train_equal/')
+    if not os.path.exists(dir_train):
+        os.mkdir(dir_train)
+    dir_valid = os.path.join(url, 'valid_equal/')
+    if not os.path.exists(dir_valid):
+        os.mkdir(dir_valid)
+
+    all_img = os.listdir(os.path.join(url, 'images/'))
+    print("I have found {} images in directory {}. I will try to allocate {} percent of them in train dataset with equal distribution.".format(
+        len(all_img), url, train_perc * 100))
+    # list znaciek
+
+    if trieda == 'znacky':
+        znacky_all = [f.split("_")[1] for f in all_img]
+    else:
+        print("TODO: ako z nazvu suboru dostanem model?")
+        znacky_all = None
+    znacky = (list(set(znacky_all)))
+    znacky_all = list(znacky_all)
+    print("Celkom je {} unikátnych tried typu: {}".format(len(znacky), trieda))
+
+    # zisti ich pocty
+    znacky_poc = [znacky_all.count(zn) for zn in znacky]
+    znacky_cutoffs = [int(np.ceil(train_perc * i)) for i in znacky_poc]
+
+    # list kde element su indexy, na ktorych su obrazky danej znacky auta
+    indexy_znaciek = [[i for i in range(len(znacky_all)) if znacky_all[i] == znacka] for znacka in znacky]
+
+    valid_indices = []
+    for i in range(len(znacky_cutoffs)):
+        valid_indices = valid_indices + indexy_znaciek[i][znacky_cutoffs[i]:]
+    train_indices = np.array(list(set(range(len(all_img))) - set(list(np.array(valid_indices)))), dtype='int')
+    valid_indices = np.array(list(valid_indices), dtype='int')
+
+    all_img = np.array(all_img)
+    # v kazdom najdi train_cut_index
+    print()
+    if len(os.listdir(os.path.join(url, 'train_equal/'))) != len(train_indices):
+        for f in all_img[train_indices]:
+            im = pilimg.open(os.path.join(url, 'images/', f))
+            im = im.resize((w, h))
+            im.save(os.path.join(url, 'train_equal/', f))
+
+        for f in all_img[valid_indices]:
+            im = pilimg.open(os.path.join(url, 'images/', f))
+            im = im.resize((w, h))
+            im.save(os.path.join(url, 'valid_equal/', f))
+
+    print("V train_equal directory je {} percent dat.".format(
+        100 * len(os.listdir(os.path.join(url, 'train_equal/'))) / len(all_img)))
 
 
 class DataClass(object):
@@ -113,9 +196,9 @@ class DataClass(object):
         return np.array(chunk_imgs), np.array(chunk_labels)
 
     def next_chunk(self):
-        #print('Getting new chunk')
+        # print('Getting new chunk')
         self.data, self.labels = self.load_chunk()
-        #print('Got it')
+        # print('Got it')
 
     def next_batch(self):
         data = self.data[self.batch_cursor:self.batch_cursor + self.batch_size]
