@@ -4,6 +4,12 @@ import pandas as pd
 from PIL import Image as pilimg
 from numpy import random
 
+def file_to_model(f):
+    if f.split("_")[1] == "Alfa":  # or f.split("_")[1] == "Land":
+        model = f.split("_")[1] + '_' + f.split('_')[4].split('-')[0] + '_' + f.split('_')[4].split('-')[1]
+    else:
+        model = f.split("_")[1] + '_' + f.split('_')[4].split('-')[0]
+    return model
 
 def split_images(url, split, h, w):
     all_img = os.listdir(os.path.join(url, 'images/'))
@@ -18,8 +24,8 @@ def split_images(url, split, h, w):
             im = im.resize((w, h))
             im.save(os.path.join(url, 'valid/', f))
 
-    znacky = (list(set([f.split("_")[1] for f in all_img])))
-    znacky.remove("S▌Мkoda")
+    znacky = [file_to_model(f) for f in all_img]
+    znacky = list(set(znacky))
     znacky.sort()
 
     return znacky
@@ -65,9 +71,8 @@ class DataClass(object):
     def load_filenames(self):
         all_img = os.listdir(self.path)
         names = all_img
-        self.all_labels = [f.split("_")[1] for f in all_img]
-        self.all_labels = [l if l != "S▌Мkoda" else "Škoda" for l in self.all_labels]
-        return names
+        self.all_labels = [file_to_model(f) for f in all_img]
+        return np.array(names)
 
     def shuffle(self):
         random.shuffle(self.file_names)
@@ -93,7 +98,8 @@ class DataClass(object):
 
             im = np.array(im).astype(float) / 255
             chunk_imgs.append(im)
-            chunk_labels.append(self.labels_to_onehot(f.split("_")[1]))
+            chunk_labels.append(self.labels_to_onehot(file_to_model(f)))
+            print(f, file_to_model(f))
         self.chunk_cursor = (self.chunk_cursor + self.chunk_size)
 
         self.current_chunk_size = len(chunk_imgs)
@@ -129,6 +135,5 @@ class DataClass(object):
 
     def labels_to_onehot(self, lab):
         onehots = np.zeros(self.num_class)
-        if lab=="S▌Мkoda": lab = "Škoda"
         onehots[self.car_makes.index(lab)] = 1
         return list(onehots)

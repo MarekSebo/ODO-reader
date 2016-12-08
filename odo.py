@@ -5,14 +5,14 @@ import subprocess
 import time
 import pandas as pd
 
-from loading import DataClass
-from loading import split_images
+from modely_loading import DataClass
+from modely_loading import split_images
 
 # PARAMETRE_NN-------------------------------------------
-num_steps = 5  #int(input('How many steps?'))
+num_steps = 100  #int(input('How many steps?'))
 batch_size = 16
 info_freq = 25
-session_log_name = 'godaddy1'  #input('Name your baby... architecture!')
+session_log_name = 'godaddy010'  #input('Name your baby... architecture!')
 
 num_hidden = [120]
 
@@ -92,7 +92,7 @@ kernel_sizes = [
 kernel_sizes = {name: kernel_sizes[i] for i, name in enumerate(conv_layer_names)}
 
 num_filters = [
-    16, 32, 48, 64, 64, 64, 64, 64, 64, 64
+    16, 32, 48, 64, 64, 64, 64, 128, 128, 128
 ]
 num_filters = {name: num_filters[i] for i, name in enumerate(conv_layer_names)}
 
@@ -342,7 +342,7 @@ with tf.Session(graph=graph) as session:
         # if step == num_steps: pokracovat = 0
         if (step % num_steps) == 0:
             print("{} steps took {} minutes.".format(num_steps, (time.time()-cas)/60))
-            subprocess.call(['spd-say', 'Oh yeah! Its over, baby! Step {}. Continue?'.format(step + step_0)])
+            subprocess.call(['spd-say', 'Oh yeah! Go Johnny Go, Go! Step {}. Continue?'.format(step + step_0)])
             continue_training = (input('Continue? 1/0'))
             cas = time.time()
             # continue_training = '0'
