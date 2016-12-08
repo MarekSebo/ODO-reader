@@ -61,10 +61,10 @@ def split_images_equal(url, train_perc, h, w, trieda):
     # trieda = {'znacky', 'modely'}
 
     # vytvor foldre ak nie su
-    dir_train = os.path.join(url, 'train_equal/')
+    dir_train = os.path.join(url, 'train_equal_'+trieda+'/')
     if not os.path.exists(dir_train):
         os.mkdir(dir_train)
-    dir_valid = os.path.join(url, 'valid_equal/')
+    dir_valid = os.path.join(url, 'valid_equal_'+trieda+'/')
     if not os.path.exists(dir_valid):
         os.mkdir(dir_valid)
 
@@ -100,19 +100,19 @@ def split_images_equal(url, train_perc, h, w, trieda):
     all_img = np.array(all_img)
     # v kazdom najdi train_cut_index
     print()
-    if len(os.listdir(os.path.join(url, 'train_equal/'))) != len(train_indices):
+    if len(os.listdir(dir_train)) != len(train_indices):
         for f in all_img[train_indices]:
             im = pilimg.open(os.path.join(url, 'images/', f))
             im = im.resize((w, h))
-            im.save(os.path.join(url, 'train_equal/', f))
+            im.save(os.path.join(dir_train, f))
 
         for f in all_img[valid_indices]:
             im = pilimg.open(os.path.join(url, 'images/', f))
             im = im.resize((w, h))
-            im.save(os.path.join(url, 'valid_equal/', f))
+            im.save(os.path.join(dir_valid, f))
 
     print("V train_equal directory je {} percent dat.".format(
-        100 * len(os.listdir(os.path.join(url, 'train_equal/'))) / len(all_img)))
+        100 * len(os.listdir(dir_train)) / len(all_img)))
 
 
 class DataClass(object):

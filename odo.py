@@ -33,8 +33,8 @@ url = "/home/marek/PycharmProjects/ODO_reader_/ODO_reader"
 # url = '/home/katarina/PycharmProjects/TensorFlowTut/ODO_reader'
 
 train_data_perc = 0.8 # velkost train datasetu
-znacky = zoznam_tried(url, 'znacky')
-split_images_equal(url, train_data_perc, image_height, image_width,'znacky')
+znacky = zoznam_tried(url, 'modely')
+split_images_equal(url, train_data_perc, image_height, image_width,'modely')
 print(znacky)
 num_classes = len(znacky)
 print(num_classes)
