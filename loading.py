@@ -5,26 +5,25 @@ from PIL import Image as pilimg
 from numpy import random
 
 
-def zoznam_znaciek(url, trieda):
-    # znacky = {'znacky', 'modely'}
+def zoznam_tried(url, trieda):
+    # trieda = {'znacky', 'modely'}
     all_img = os.listdir(os.path.join(url, 'images/'))
 
     if(trieda == 'znacky'):
-        znacky = (list(set([f.split("_")[1] for f in all_img])))
+        triedy = (list(set([f.split("_")[1] for f in all_img])))
     elif(trieda == 'modely'):
-        print("Error: treba dorobit funkciu 'zoznam_znaciek' pre MODELY")
-        return
+        triedy = (list(set([f.split("_")[1] + '_' + f.split('_')[4].split('-')[0] for f in all_img])))
     else:
         print("Error: zle zadanie triedy aut. oprav v kode ty dilino!")
         return
-    znacky.sort()
+    triedy.sort()
 
-    return znacky
+    return triedy
 
-def split_images(url, train_perc, h, w, trieda):
-    #h, w - height, width obrazkov (ak chceme resize)
+def split_images(url, train_perc, h, w):
+    # h, w - height, width obrazkov (ak chceme resize)
 
-    #vytvor foldre ak nie su
+    # vytvor foldre ak nie su
     dir_train=os.path.join(url, 'train/')
     if not os.path.exists(dir_train):
         os.mkdir(dir_train)
@@ -32,11 +31,11 @@ def split_images(url, train_perc, h, w, trieda):
     if not os.path.exists(dir_valid):
         os.mkdir(dir_valid)
 
-    #rozdel a resizni obrazky
+    # rozdel a resizni obrazky
     all_img = os.listdir(os.path.join(url, 'images/'))
     print("I have found {} images in directory {}. I will allocate {} percent of them in train dataset".format(
         len(all_img), url, train_perc * 100))
-    #index posledneho train obrazku
+    # index posledneho train obrazku
     split = int(np.floor(train_perc *len(all_img)))
     if len(os.listdir(os.path.join(url, 'train/'))) != split:
         for f in all_img[:split]:
@@ -51,9 +50,9 @@ def split_images(url, train_perc, h, w, trieda):
     return
 
 
-def split_images_equal(url, train_perc, h, w,trieda):
-    #split - pocet trenovacich dat
+def split_images_equal(url, train_perc, h, w, trieda):
     #h, w - height, width obrazkov (ak chceme resize)
+    # trieda = {'znacky', 'modely'}
 
     # vytvor foldre ak nie su
     dir_train = os.path.join(url, 'train_equal/')
@@ -69,24 +68,26 @@ def split_images_equal(url, train_perc, h, w,trieda):
     # list znaciek
 
     if trieda == 'znacky':
-        znacky_all = [f.split("_")[1] for f in all_img]
+        triedy_all = [f.split("_")[1] for f in all_img]
+    elif trieda == 'modely':
+        triedy_all = [f.split("_")[1] + '_' + f.split('_')[4].split('-')[0] for f in all_img]
     else:
-        print("TODO: ako z nazvu suboru dostanem model?")
-        znacky_all = None
-    znacky = (list(set(znacky_all)))
-    znacky_all = list(znacky_all)
-    print("Celkom je {} unikátnych tried typu: {}".format(len(znacky), trieda))
+        print("Zle si zadal nazov triedy, ty dilino!")
+        return
+    triedy = (list(set(triedy_all)))
+    triedy_all = list(triedy_all)
+    print("Celkom je {} unikátnych tried typu: {}".format(len(triedy), trieda))
 
     # zisti ich pocty
-    znacky_poc = [znacky_all.count(zn) for zn in znacky]
-    znacky_cutoffs = [int(np.ceil(train_perc * i)) for i in znacky_poc]
+    triedy_poc = [triedy_all.count(tr) for tr in triedy]
+    triedy_cutoffs = [int(np.ceil(train_perc * i)) for i in triedy_poc]
 
-    # list kde element su indexy, na ktorych su obrazky danej znacky auta
-    indexy_znaciek = [[i for i in range(len(znacky_all)) if znacky_all[i] == znacka] for znacka in znacky]
+    # list kde element su indexy, na ktorych su obrazky danej triedy auta
+    indexy_znaciek = [[i for i in range(len(triedy_all)) if triedy_all[i] == tr] for tr in triedy]
 
     valid_indices = []
-    for i in range(len(znacky_cutoffs)):
-        valid_indices = valid_indices + indexy_znaciek[i][znacky_cutoffs[i]:]
+    for i in range(len(triedy_cutoffs)):
+        valid_indices = valid_indices + indexy_znaciek[i][triedy_cutoffs[i]:]
     train_indices = np.array(list(set(range(len(all_img))) - set(list(np.array(valid_indices)))), dtype='int')
     valid_indices = np.array(list(valid_indices), dtype='int')
 
