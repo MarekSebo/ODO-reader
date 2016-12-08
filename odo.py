@@ -28,8 +28,9 @@ image_height, image_width = (192, 256)
 cut_height, cut_width = (int(np.floor(0.85*image_height)), int(np.floor(0.85*image_width)))
 # ------------------
 # nacitanie dat
+url = os.getcwd()
 # url = "/home/andrej/tf/ODO_reader"
-url = "/home/marek/PycharmProjects/ODO_reader_/ODO_reader"
+# url = "/home/marek/PycharmProjects/ODO_reader_/ODO_reader"
 # url = '/home/katarina/PycharmProjects/TensorFlowTut/ODO_reader'
 
 train_data_perc = 0.8 # velkost train datasetu

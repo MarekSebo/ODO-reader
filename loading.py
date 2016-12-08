@@ -61,10 +61,10 @@ def split_images_equal(url, train_perc, h, w, trieda):
     # trieda = {'znacky', 'modely'}
 
     # vytvor foldre ak nie su
-    dir_train = os.path.join(url, 'train_equal_'+trieda+'/')
+    dir_train = os.path.join(url, 'train/')
     if not os.path.exists(dir_train):
         os.mkdir(dir_train)
-    dir_valid = os.path.join(url, 'valid_equal_'+trieda+'/')
+    dir_valid = os.path.join(url, 'valid/')
     if not os.path.exists(dir_valid):
         os.mkdir(dir_valid)
 
@@ -99,7 +99,6 @@ def split_images_equal(url, train_perc, h, w, trieda):
 
     all_img = np.array(all_img)
     # v kazdom najdi train_cut_index
-    print()
     if len(os.listdir(dir_train)) != len(train_indices):
         for f in all_img[train_indices]:
             im = pilimg.open(os.path.join(url, 'images/', f))
@@ -183,7 +182,6 @@ class DataClass(object):
             im = np.array(im).astype(float) / 255
             chunk_imgs.append(im)
             chunk_labels.append(self.labels_to_onehot(file_to_model(f)))
-            print(f, file_to_model(f))
         self.chunk_cursor = (self.chunk_cursor + self.chunk_size)
 
         self.current_chunk_size = len(chunk_imgs)
