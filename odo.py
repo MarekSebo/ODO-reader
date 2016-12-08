@@ -7,11 +7,13 @@ import pandas as pd
 
 from loading import DataClass
 from loading import split_images
+from loading import split_images_equal
+from loading import zoznam_znaciek
 
 # PARAMETRE_NN-------------------------------------------
 num_steps = int(input('How many steps?'))
 batch_size = 16
-info_freq = 25
+info_freq = 50
 session_log_name = input('Name your baby... architecture!')
 
 num_hidden = [120]
@@ -25,12 +27,13 @@ image_height, image_width = (192, 256)
 cut_height, cut_width = (int(np.floor(0.85*image_height)), int(np.floor(0.85*image_width)))
 # ------------------
 # nacitanie dat
-url = "/home/andrej/tf/ODO_reader"
-# url = "/home/marek/PycharmProjects/ODO_reader_/ODO_reader"
+# url = "/home/andrej/tf/ODO_reader"
+url = "/home/marek/PycharmProjects/ODO_reader_/ODO_reader"
 # url = '/home/katarina/PycharmProjects/TensorFlowTut/ODO_reader'
 
-train_data_size = 6000
-znacky = split_images(url, train_data_size, image_height, image_width)
+train_data_perc = 0.8 # velkost train datasetu
+znacky = zoznam_znaciek(url, 'znacky')
+split_images_equal(url, train_data_perc, image_height, image_width,'znacky')
 print(znacky)
 num_classes = len(znacky)
 print(num_classes)
