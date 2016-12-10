@@ -12,8 +12,8 @@ from loading import zoznam_tried
 
 # PARAMETRE_NN-------------------------------------------
 num_steps = int(input('How many steps?'))
-batch_size = 16
-info_freq = 50
+batch_size = 32
+info_freq = 100
 session_log_name = input('Name your baby... architecture!')
 
 num_hidden = [120]
@@ -22,7 +22,16 @@ keep_prob_fc = 0.5
 
 chunk_size = 128
 channels = 3
+
+# LRate
 learning_rate = 0.0001
+# ak nechces decay tak LR_decay = False
+LR_decay = True
+LR_non_decay_steps = 0 # kolko steps nie je decay
+assert LR_non_decay_steps <= num_steps, print("LR_non_decay_steps musi byt menej ako num_steps!")
+LR_decay_times = 5
+LR_decay_rate = 0.5
+LR_decay_period = int(np.floor(((num_steps - LR_non_decay_steps) / LR_decay_times)))+1 # +1 je dirty riesenie
 
 image_height, image_width = (192, 256)
 cut_height, cut_width = (int(np.floor(0.85*image_height)), int(np.floor(0.85*image_width)))
@@ -344,19 +353,27 @@ with tf.Session(graph=graph) as session:
                   )
             print('------------------------')
 
+        # learning rate decay
+        if(LR_decay):
+            if step >= LR_non_decay_steps:
+                if (step - LR_non_decay_steps) % LR_decay_period == 0:
+                    learning_rate = learning_rate * LR_decay_rate
+                    print("Step {}: Learning rate decayed to {}".format(step, learning_rate))
+
         # if step == num_steps: pokracovat = 0
         if (step % num_steps) == 0:
             print("{} steps took {} minutes.".format(num_steps, (time.time()-cas)/60))
             subprocess.call(['spd-say', 'Oh yeah! Go Johnny Go, Go! Step {}. Continue?'.format(step + step_0)])
             continue_training = (input('Continue? 1/0'))
-            cas = time.time()
             # continue_training = '0'
             if step != 0:
                 current_log.append('Minibatch loss at step {}: {}'.format(step + step_0, loss_value))
                 current_log.append('Minibatch accuracy: '+str(100 * accuracy(predictions, batch_labels)))
                 current_log.append('Validation accuracy (batch-sized subset): '
                                    + str(100 * accuracy(valid_predictions, batch_labels_valid)))
+                current_log.append("Elapsed time: {} minutes". format((time.time()-cas)/60))
                 current_log.append('------------------------------------------------------')
+            cas = time.time()
 
     save_path = saver.save(session, "{}/logs/{}.ckpt".format(url, session_log_name))
 
