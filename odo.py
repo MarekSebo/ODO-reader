@@ -199,7 +199,7 @@ with graph.as_default():
         # ),
 
         'out': tf.Variable(tf.truncated_normal(
-            [num_filters[conv_layer_names[-1]], num_classes], stddev=np.sqrt(2 / (num_filters[conv_layer_names[-1]]))))
+            [32, num_classes], stddev=np.sqrt(2 / (num_filters[conv_layer_names[-1]]))))
             #[num_hidden[0], num_classes], stddev=np.sqrt(2 / (num_hidden[0]))))
     }
 
@@ -218,10 +218,68 @@ with graph.as_default():
 
     # vytvor biasy pre ostatne konvolucne vrstvy
     for l in conv_layer_names:
-        biases[l] = tf.Variable(tf.zeros([num_filters[l]])),
+        biases[l] = tf.Variable(tf.zeros([num_filters[l]]))
+
 
     # Model
     log = []
+
+    def inc_add_weights(index, input_filters, output_filters):
+        outf1 = output_filters // 8
+        outf2 = output_filters // 4
+
+        weights['inc{}_out1_1x1'.format(index)] = tf.Variable(tf.random_normal(
+            [1, 1, input_filters, outf2],
+            stddev=np.sqrt(2 / input_filters)))
+        biases['inc{}_out1_1x1'.format(index)] = tf.Variable(tf.zeros([outf2]))
+
+        weights['inc{}_out2_1x1'.format(index)] = tf.Variable(tf.random_normal(
+            [1, 1, input_filters, outf1],
+            stddev=np.sqrt(2 / input_filters)))
+        biases['inc{}_out2_1x1'.format(index)] = tf.Variable(tf.zeros([outf1]))
+
+        weights['inc{}_out2_3x3'.format(index)] = tf.Variable(tf.random_normal(
+            [3, 3, outf1, outf2],
+            stddev=np.sqrt(2 / outf1)))
+        biases['inc{}_out2_3x3'.format(index)] = tf.Variable(tf.zeros([outf2]))
+
+        weights['inc{}_out3_1x1'.format(index)] = tf.Variable(tf.random_normal(
+            [1, 1, input_filters, outf1],
+            stddev=np.sqrt(2 / input_filters)))
+        biases['inc{}_out3_1x1'.format(index)] = tf.Variable(tf.zeros([outf1]))
+
+        weights['inc{}_out3_5x5'.format(index)] = tf.Variable(tf.random_normal(
+            [5, 5, outf1, outf2],
+            stddev=np.sqrt(2 / outf1)))
+        biases['inc{}_out3_5x5'.format(index)] = tf.Variable(tf.zeros([outf2]))
+
+        weights['inc{}_out4_1x1'.format(index)] = tf.Variable(tf.random_normal(
+            [1, 1, input_filters, outf2],
+            stddev=np.sqrt(2 / input_filters)))
+        biases['inc{}_out4_1x1'.format(index)] = tf.Variable(tf.zeros([outf2]))
+
+    inc_add_weights(0, 128, 64)
+    inc_add_weights(1, 64, 32)
+
+    def inception(data, index):
+        out1 = tf.nn.relu(tf.nn.conv2d(data, weights['inc{}_out1_1x1'.format(index)], [1, 1, 1, 1], padding='SAME')\
+                          + biases['inc{}_out1_1x1'.format(index)])
+
+        out2 = tf.nn.relu(tf.nn.conv2d(data, weights['inc{}_out2_1x1'.format(index)], [1, 1, 1, 1], padding='SAME')\
+                          + biases['inc{}_out2_1x1'.format(index)])
+        out2 = tf.nn.conv2d(out2, weights['inc{}_out2_3x3'.format(index)], [1, 1, 1, 1], padding='SAME')\
+            + biases['inc{}_out2_3x3'.format(index)]
+
+        out3 = tf.nn.relu(tf.nn.conv2d(data, weights['inc{}_out3_1x1'.format(index)], [1, 1, 1, 1], padding='SAME')\
+                          + biases['inc{}_out3_1x1'.format(index)])
+        out3 = tf.nn.conv2d(out3, weights['inc{}_out3_5x5'.format(index)], [1, 1, 1, 1], padding='SAME')\
+            + biases['inc{}_out3_5x5'.format(index)]
+
+        out4 = tf.nn.max_pool(data, [1, 3, 3, 1], [1, 1, 1, 1], padding='SAME')
+        out4 = tf.nn.relu(tf.nn.conv2d(out4, weights['inc{}_out4_1x1'.format(index)], [1, 1, 1, 1], padding='SAME')\
+                          + biases['inc{}_out4_1x1'.format(index)])
+
+        return tf.nn.relu(tf.concat(3, [out1, out2, out3, out4]))
 
     def model(data):
         # INPUT je teraz velkosti batch x h x w x ch
@@ -239,7 +297,13 @@ with graph.as_default():
 
         # -------------------------
 
+        out = inception(out, 0)
         shape = out.get_shape().as_list()
+        log.append('inception1' + ': ' + str(out.get_shape().as_list()))
+
+        out = inception(out, 1)
+        shape = out.get_shape().as_list()
+        log.append('inception2' + ': ' + str(out.get_shape().as_list()))
 
         # avg pooling
         out = tf.nn.avg_pool(out, [1, shape[1], shape[2], 1], [1, 1, 1, 1], 'VALID')
