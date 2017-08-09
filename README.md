@@ -1,7 +1,6 @@
 # ODO_reader
-Reading odo
 
+Neural net with CTC for reading odometer zoomed cut-outs.
 
-TODO: update loggingu: pravidelnejsie logovanie, vypis aj cas
-TODO: early stopping, learning rate decay
+Tensorflow, no CX flow.
 
